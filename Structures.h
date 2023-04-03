@@ -106,4 +106,11 @@ struct Element
 	}
 };
 
+enum class Bound
+{
+	FRONT, BACK, 
+	LEFT, RIGHT,
+	LOWER, UPPER
+};
+
 #endif

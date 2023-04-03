@@ -103,5 +103,12 @@ int binarySearch(const vector<int>& values, int value, int left, int right)
 	return -1;
 }
 
+template <typename T>
+void removeDuplicate(vector<T>& vec)
+{
+	std::sort(vec.begin(), vec.end());
+	auto last = std::unique(vec.begin(), vec.end());
+	vec.erase(last, vec.end());
+}
 
 #endif
