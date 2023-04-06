@@ -94,14 +94,30 @@ struct Anomaly
 	double sigma;
 };
 
+struct Node
+{
+	int num;
+	Point3D p;
+
+	Node() :
+		num(0),
+		p({ 0, 0, 0 })
+	{}
+
+	Node(int _num, Point3D _p) :
+		num(_num),
+		p(_p)
+	{}
+};
+
 struct Element
 {
-	vector<int> globalNumbers;
+	vector<Node> nodes;
 	double sigma;
 
 	Element()
 	{
-		globalNumbers.resize(8);
+		nodes.resize(8);
 		sigma = 1;
 	}
 };

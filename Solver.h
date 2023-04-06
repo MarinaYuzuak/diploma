@@ -3,8 +3,9 @@
 
 #include <fstream>
 #include <algorithm>
-#include "Structures.h"
-#include "lightweight.h"
+//#include "Structures.h"
+#include "functions.h"
+//#include "lightweight.h"
 #include "Matrix.h"
 #include "MatrixSparse.h"
 #include "Vector.h"
@@ -24,22 +25,39 @@ public:
 		auto&& [ig, jg] = generatePortrait();
 		m_A.setIg(ig); m_A.setJg(jg);
 
+		std::cout << "ig:" << std::endl;
+		for (auto i = 0; i < ig.size(); i++)
+			std::cout << ig[i] << " ";
+
+		std::cout << std::endl << std::endl;
+
+		std::cout << "jg:" << std::endl;
+		for (auto i = 0; i < jg.size(); i++)
+			std::cout << jg[i] << " ";
 
 		std::cout << std::endl << std::endl;
 		assembleMatrix();
 		assembleVector();
 
+		auto m = m_A.getDenseMatrix();
+		std::ofstream fout;
+		fout.open("dense_matrix.txt");
+		for (auto i = 0; i < m.size(); i++)
+		{
+			for (auto j = 0; j < m[0].size(); j++)
+				fout << m[i][j] << " ";
+			fout << std::endl;
+		}
+
 		//m_nodesDirichlet = nodesWithFirstConditions();
 		defineBoundsNodes();
 
-	/*	std::cout << "b:" << std::endl;
 		auto _b = m_b.getV();
-		for (auto i = 0; i < _b.size(); i++)
-			std::cout << _b[i] << " ";*/
 
 		applyDirichlet();
+		CalculateSolution();
 
-		/*std::cout << std::endl;
+		std::cout << std::endl;
 		std::cout << std::endl;
 
 		std::cout << "b:" << std::endl;
@@ -53,13 +71,48 @@ public:
 		std::cout << "ggl:" << std::endl;
 		auto ggl = m_A.getGgl();
 		for (auto i = 0; i < ggl.size(); i++)
-			std::cout << ggl[i] << std::endl;
+			std::cout << i << " " << ggl[i] << std::endl;
 		std::cout << ggl.size();
+
+		std::cout << std::endl;
 
 		std::cout << "\n\ndi:" << std::endl;
 		auto di = m_A.getDi();
 		for (auto i = 0; i < di.size(); i++)
-			std::cout << di[i] << std::endl;*/
+			std::cout << di[i] << std::endl;
+
+		std::cout << std::endl;
+		std::cout << std::endl;
+
+		std::cout << "q_moe:" << std::endl;
+		for (auto i = 0; i < m_Solution.size(); i++)
+		{
+			std::cout << m_Solution[i] << " ";
+		}
+
+		std::cout << std::endl;
+
+
+		vector<double> q(m_Solution.size(), 0.0);
+		for (auto i = 0; i < m_Elements.size(); i++)
+		{
+			for (auto j = 0; j < m_Elements[i].nodes.size(); j++)
+			{
+				q[m_Elements[i].nodes[j].num] = u(m_Elements[i].nodes[j].p);
+			}
+		}
+
+		std::cout << "solution | q_moe" << std::endl;
+		for (auto i = 0; i < m_Solution.size(); i++)
+		{
+			std::cout << m_Solution[i] << " " << q[i] << std::endl;
+		}
+
+
+		std::cout << "q:" << std::endl;
+		for (auto i = 0; i < q.size(); i++)
+			std::cout << q[i] << " ";
+
 	};
 	
 
@@ -70,13 +123,13 @@ private:
 	vector<Source> m_sources;
 	vector<Receiver> m_receivers;
 
-	vector<Element> m_finitElements; // можно и лучше название, наверное))
+	vector<Element> m_Elements;
 
 	MatrixSparse m_A;
 	Vector m_b;
 
-	vector<int> m_nodesDirichlet;
-	vector<int> m_nodesNeumann;
+	vector<Node> m_nodesDirichlet;
+	vector<Node> m_nodesNeumann;
 
 	vector<int> m_boundCond; // вектор из 6 элементов, где каждой из 6 граней ставится в соответствие свой тип КУ. 
 
@@ -84,12 +137,16 @@ private:
 	vector<double> m_xGrid;
 	vector<double> m_yGrid;
 
+	vector<double> m_Solution;
+
 
 private:
 	void initDomainData(const path& _path);
 	void buildZGrid();
 	void defineGlobalNumbers();
 	void buildDomain(); // название потом придумаю. чтобы в конструкторе не было всякой лишней фигни типа построения сетки
+
+	void CalculateSolution();
 
 	Matrix buildLocalG(double hx, double hy, double hz, double sigma);
 	Matrix buildLocalC(double hx, double hy, double hz);
@@ -111,21 +168,62 @@ private:
 	vector<double> buildYGrid();
 };
 
+void Solver::CalculateSolution()
+{
+	auto b = m_b.getV();
+	auto size = b.size();
+
+	m_Solution.resize(b.size(), 0.0);
+	auto eps = 1e-21;
+	auto maxIter = static_cast<uint32_t>(1e+7);
+	auto loadVectorNorm = sqrt(dotProduct(b, b));
+	auto z = b;
+	auto r = b;
+
+	auto p = m_A.MultiplyByVector(z);
+
+	auto rDotR = dotProduct(r, r);
+	auto residual = sqrt(rDotR) / loadVectorNorm;
+
+	for (uint32_t k = 1; k < maxIter && residual > eps; k++)
+	{
+		auto pDotP = dotProduct(p, p);
+		auto a = dotProduct(p, r) / pDotP;
+
+		for (uint32_t i = 0; i < b.size(); i++)
+		{
+			m_Solution[i] += a * z[i];
+			r[i] -= a * p[i];
+		}
+		auto Ar = m_A.MultiplyByVector(r);
+		auto b = -dotProduct(p, Ar) / pDotP;
+
+		for (auto i = 0; i < size; i++)
+		{
+			z[i] = r[i] + b * z[i];
+			p[i] = Ar[i] + b * p[i];
+		}
+		rDotR = dotProduct(r, r);
+		residual = sqrt(rDotR) / loadVectorNorm;
+	}
+}
+
+
 void Solver::defineBoundaryNodes(int start, int elementWithWhichLastRowBegins, vector<int>& locNums, int addition, Bound facet, int dim)
 {
 	int endRow = start + addition * dim;
 	int condition = m_boundCond[(int)facet];
-	vector<int>* nodes;
+	vector<Node>* nodes;
 	condition == 1 ? nodes = &m_nodesDirichlet : nodes = &m_nodesNeumann; // ну потому что нет у нас третьих краевых, не предусмотрены они в этой задаче.
 
 	//while (start < m_finitElements.size())
 	while(start < elementWithWhichLastRowBegins + addition)
 	{
-		nodes->push_back(m_finitElements[start].globalNumbers[locNums[0]]);
+		nodes->push_back(m_Elements[start].nodes[locNums[0]]);
 
 		for (auto i = start; i <= endRow; i += addition)
 		{
-			nodes->push_back(m_finitElements[i].globalNumbers[locNums[1]]);
+			nodes->push_back(m_Elements[i].nodes[locNums[1]]);
 		}
 
 		switch (facet)
@@ -146,10 +244,10 @@ void Solver::defineBoundaryNodes(int start, int elementWithWhichLastRowBegins, v
 	start = elementWithWhichLastRowBegins;
 	endRow = start + addition * dim;
 
-	nodes->push_back(m_finitElements[start].globalNumbers[locNums[2]]);
+	nodes->push_back(m_Elements[start].nodes[locNums[2]]);
 	for (auto i = start; i <= endRow; i += addition)
 	{
-		nodes->push_back(m_finitElements[i].globalNumbers[locNums[3]]);
+		nodes->push_back(m_Elements[i].nodes[locNums[3]]);
 	}
 }
 
@@ -221,7 +319,7 @@ void Solver::applyDirichlet()
 
 	for (auto node : m_nodesDirichlet)
 	{
-		b[node] = 0.0;
+		b[node.num] = u(node.p);
 	}
 
 	m_b.setV(b);
@@ -269,13 +367,13 @@ void Solver::performGaussianReduction()
 {
 	for (const auto& node : m_nodesDirichlet)
 	{
-		auto row = node;
+		auto row = node.num;
 		reduceRow(row);
 	}
 	for (const auto& node : m_nodesDirichlet)
 	{
 		auto row = node;
-		m_A.zeroOutRowAndCol(row);
+		m_A.zeroOutRowAndCol(row.num);
 	}
 }
 
@@ -283,7 +381,7 @@ void Solver::performGaussianReduction()
 void Solver::assembleVector()
 {
 	vector<double> globB(m_xGrid.size() * m_yGrid.size() * m_zGrid.size(), 0.0);
-
+#ifdef _NORMAL_TESTS
 	for (auto i = 0; i < m_sources.size(); i++)
 	{
 		auto globNums = m_finitElements[m_sources[i].elA].globalNumbers;
@@ -298,8 +396,17 @@ void Solver::assembleVector()
 		globB[globNums[6]] += X_func(0, m_sources[i].A.x, xp1, hx) * Y_func(1, m_sources[i].A.y, ys, hy);
 		globB[globNums[7]] += X_func(1, m_sources[i].A.x, xp, hx) * Y_func(1, m_sources[i].A.y, ys, hy);
 	}
+#endif
 
-	m_b.setV(globB);
+//#ifdef _SIMPLE_TESTS
+//	
+//
+//#endif
+
+	// потому что на трилинейных базисных функциях, так как в задаче нет матрицы массы, глобальный вектор б до учета краевых всегда будет нулевой.
+	// естесственно, если делать тесты на линейных полиномах, потому что на полиномах более высокой степени уже не факт, что решение будет достаточно
+	// точным.
+	m_b.setV(globB); 
 }
 
 void Solver::assembleMatrix()
@@ -325,14 +432,14 @@ void Solver::assembleMatrix()
 				double hy = m_yGrid[s + 1] - m_yGrid[s];
 				double hz = m_zGrid[r + 1] - m_zGrid[r];
 
-				Matrix local = buildLocalG(hx, hy, hz, m_finitElements[nEl].sigma);
-				auto glob_nums = m_finitElements[nEl].globalNumbers;
+				Matrix local = buildLocalG(hx, hy, hz, m_Elements[nEl].sigma);
+				auto glob_nums = m_Elements[nEl].nodes;
 
-				for (auto i = 0; i < m_finitElements[0].globalNumbers.size(); i++)
+				for (auto i = 0; i < m_Elements[0].nodes.size(); i++)
 				{
-					for (auto j = 0; j < m_finitElements[0].globalNumbers.size(); j++)
+					for (auto j = 0; j < m_Elements[0].nodes.size(); j++)
 					{
-						int glob_i = glob_nums[i]; int glob_j = glob_nums[j];
+						int glob_i = glob_nums[i].num; int glob_j = glob_nums[j].num;
 
 						if (glob_i == glob_j)
 						{
@@ -369,15 +476,15 @@ std::pair<vector<int>, vector<int>> Solver::generatePortrait()
 	vector<uint32_t> listbeg(N * N, 0);
 	uint32_t listSize = 0;
 
-	for (const auto elem : m_finitElements)
+	for (const auto elem : m_Elements)
 	{
-		for (uint32_t i = 0; i < elem.globalNumbers.size(); i++)
+		for (uint32_t i = 0; i < elem.nodes.size(); i++)
 		{
-			auto k = elem.globalNumbers[i];
-			for (uint32_t j = i + 1; j < elem.globalNumbers.size(); j++)
+			auto k = elem.nodes[i].num;
+			for (uint32_t j = i + 1; j < elem.nodes.size(); j++)
 			{
 				auto ind1 = k;
-				auto ind2 = elem.globalNumbers[j];
+				auto ind2 = elem.nodes[j].num;
 				if (ind2 < ind1)
 				{
 					ind1 = ind2;
@@ -515,7 +622,7 @@ void Solver::defineGlobalNumbers()
 	int ny = m_yGrid.size();
 	int nz = m_zGrid.size();
 
-	m_finitElements.resize((nx - 1) * (ny - 1) * (nz - 1));
+	m_Elements.resize((nx - 1) * (ny - 1) * (nz - 1));
 
 	int r = 0;
 	int elN = 0;
@@ -526,7 +633,10 @@ void Solver::defineGlobalNumbers()
 		for (auto s = 0; s < ny - 1; s++)
 		{
 			for (auto p = 0; p < nx - 1; p++)
-				m_finitElements[elN++] = GetNumbers(p, s, r, nx, ny);
+			{
+				m_Elements[elN] = GetNumbers(p, s, r, nx, ny);
+				SetCoord(m_xGrid, m_yGrid, m_zGrid, p, s, r, m_Elements[elN++]);
+			}	
 		}
 	}
 
@@ -535,7 +645,10 @@ void Solver::defineGlobalNumbers()
 	for (auto s = 0; s < ny - 1; s++)
 	{
 		for (auto p = 0; p < nx - 1; p++)
-			m_finitElements[elN++] = GetNumbers(p, s, r, nx, ny);
+		{
+			m_Elements[elN] = GetNumbers(p, s, r, nx, ny);
+			SetCoord(m_xGrid, m_yGrid, m_zGrid, p, s, r, m_Elements[elN++]);
+		}
 	}
 
 	for (auto i = 0; i < m_sources.size(); i++)

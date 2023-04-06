@@ -129,6 +129,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="functions.h" />
     <ClInclude Include="lightweight.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="MatrixSparse.h" />
