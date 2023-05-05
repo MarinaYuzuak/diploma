@@ -656,6 +656,7 @@ void Solver::assembleVector()
 	vector<double> globB(m_X.size() * m_Y.size() * m_Z.size(), 0.0);
 
 #ifdef _NORMAL_TESTS
+	// А будет с плюсом
 	for (auto i = 0; i < m_sources.size(); i++)
 	{
 		auto globNums = m_Elements[m_sources[i].elA].nodes;
@@ -672,6 +673,7 @@ void Solver::assembleVector()
 		globB[globNums[7].num] += X_func(1, m_sources[i].A.x, xp, hx) * Y_func(1, m_sources[i].A.y, ys, hy);
 	}
 
+	// В будет с минусом
 	for (auto i = 0; i < m_sources.size(); i++)
 	{
 		auto globNums = m_Elements[m_sources[i].elB].nodes;
@@ -682,10 +684,10 @@ void Solver::assembleVector()
 		double ys = m_Y[globNums[4].s]; double ys1 = m_Y[globNums[6].s]; ;
 		double hy = ys1 - ys;
 
-		globB[globNums[4].num] += X_func(0, m_sources[i].B.x, xp1, hx) * Y_func(0, m_sources[i].B.y, ys1, hy);
-		globB[globNums[5].num] += X_func(1, m_sources[i].B.x, xp, hx) * Y_func(0, m_sources[i].B.y, ys1, hy);
-		globB[globNums[6].num] += X_func(0, m_sources[i].B.x, xp1, hx) * Y_func(1, m_sources[i].B.y, ys, hy);
-		globB[globNums[7].num] += X_func(1, m_sources[i].B.x, xp, hx) * Y_func(1, m_sources[i].B.y, ys, hy);
+		globB[globNums[4].num] -= X_func(0, m_sources[i].B.x, xp1, hx) * Y_func(0, m_sources[i].B.y, ys1, hy);
+		globB[globNums[5].num] -= X_func(1, m_sources[i].B.x, xp, hx) * Y_func(0, m_sources[i].B.y, ys1, hy);
+		globB[globNums[6].num] -= X_func(0, m_sources[i].B.x, xp1, hx) * Y_func(1, m_sources[i].B.y, ys, hy);
+		globB[globNums[7].num] -= X_func(1, m_sources[i].B.x, xp, hx) * Y_func(1, m_sources[i].B.y, ys, hy);
 	}
 #endif
 
@@ -1030,17 +1032,29 @@ void Solver::buildYGrid(const path& _path)
 	double y1, y2;
 	int numInt;
 	int subAreas;
+	int nesting;
 	double koef;
 
 	fin.open(_path / "y_settings.txt");
 
 	if (fin.is_open())
 	{
-		fin >> subAreas;
+		fin >> subAreas >> nesting;
 		for (int i = 0; i < subAreas; i++)
 		{
 			fin >> y1 >> y2 >> numInt >> koef;
 			m_Y.push_back(y1);
+
+			if (nesting == 1)
+			{
+				numInt *= 2;
+				koef = sqrt(koef);
+			}
+			else if (nesting == 2)
+			{
+				numInt *= 4;
+				koef = sqrt(sqrt(koef));
+			}
 
 			for (int j = numInt; j > 1; j--)
 			{
@@ -1074,17 +1088,30 @@ void Solver::buildXGrid(const path& _path)
 	double x1, x2;
 	int numInt;
 	int subAreas;
+	int nesting;
 	double koef;
 
 	fin.open(_path / "x_settings.txt");
 
 	if (fin.is_open())
 	{
-		fin >> subAreas;
+		fin >> subAreas >> nesting;
+
 		for (int i = 0; i < subAreas; i++)
 		{
 			fin >> x1 >> x2 >> numInt >> koef;
 			m_X.push_back(x1);
+
+			if (nesting == 1)
+			{
+				numInt *= 2;
+				koef = sqrt(koef);
+			}
+			else if (nesting == 2)
+			{
+				numInt *= 4;
+				koef = sqrt(sqrt(koef));
+			}
 
 			for (int j = numInt; j > 1; j--)
 			{
@@ -1128,14 +1155,26 @@ void Solver::buildZGrid(const path& _path)
 	if (fin.is_open())
 	{
 		int numInt;
+		int nesting;
 		double koef;
 		double x1, x2;
+
+		fin >> nesting;
 
 		for (auto i = 0; i < m_layers.size() - 1; i++)
 		{
 			fin >> numInt;
 			x1 = ref_point[i]; 
 			x2 = ref_point[i + 1];
+
+			if (nesting == 1)
+			{
+				numInt *= 2;
+			}
+			else if (nesting == 2)
+			{
+				numInt *= 4;
+			}
 
 			double step = (x2 - x1) / numInt;
 			m_Z.push_back(x1);
@@ -1152,6 +1191,18 @@ void Solver::buildZGrid(const path& _path)
 		m_Z.push_back(x1);
 
 		fin >> numInt >> koef;
+
+		if (nesting == 1)
+		{
+			numInt *= 2;
+			koef = sqrt(koef);
+		}
+		else if (nesting == 2)
+		{
+			numInt *= 4;
+			koef = sqrt(sqrt(koef));
+		}
+
 		for (int i = numInt; i > 1; i--)
 		{
 			double geomProgression = (pow(koef, i) - 1) / (koef - 1);
