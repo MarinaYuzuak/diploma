@@ -75,8 +75,6 @@ struct Source
 	Point2D B;
 	int elA = 0; // номер конечного элемента, которому принадлежит точка А (нужно для вычисления глобального вектора b)
 	int elB = 0; // номер конечного элемента, которому принадлежит точка B (нужно для вычисления глобального вектора b)
-	int pA = 0, rA = 0, sA = 0; // это нужно для простой сборки глобального b. УБРАТЬ ЭТО ОТСЮДА, СМ. ТЕТРАДЬ!!!
-	int pB = 0, rB = 0, sB = 0; // это нужно для простой сборки глобального b. УБРАТЬ ЭТО ОТСЮДА, СМ. ТЕТРАДЬ!!!
 };
 
 struct Anomaly
@@ -94,19 +92,30 @@ struct Anomaly
 	double sigma;
 };
 
+enum class Bound
+{
+	FRONT, BACK,
+	LEFT, RIGHT,
+	LOWER, UPPER,
+	UNDEFINED
+};
+
 struct Node
 {
-	int num;
-	Point3D p;
+	int num; // глобальный номер узла
+	Bound bound;
+	int p, s, r;
 
 	Node() :
 		num(0),
-		p({ 0, 0, 0 })
+		p(0), s(0), r(0),
+		bound(Bound::UNDEFINED)
 	{}
 
-	Node(int _num, Point3D _p) :
+	Node(int _num, int _p, int _s, int _r, Bound _bound) :
 		num(_num),
-		p(_p)
+		p(_p), s(_s), r(_r),
+		bound(_bound)
 	{}
 };
 
@@ -120,13 +129,6 @@ struct Element
 		nodes.resize(8);
 		sigma = 1;
 	}
-};
-
-enum class Bound
-{
-	FRONT, BACK, 
-	LEFT, RIGHT,
-	LOWER, UPPER
 };
 
 #endif

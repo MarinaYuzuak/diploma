@@ -1,8 +1,9 @@
-#ifndef _SOLVER_H
+п»ї#ifndef _SOLVER_H
 #define _SOLVER_H
 
 #include <fstream>
 #include <algorithm>
+#include <iomanip>
 //#include "Structures.h"
 #include "functions.h"
 //#include "lightweight.h"
@@ -11,8 +12,8 @@
 #include "Vector.h"
 using std::filesystem::path;
 
-#define _SIMPLE_TESTS
-//#define _NORMAL_TESTS
+//#define _SIMPLE_TESTS
+#define _NORMAL_TESTS
 
 class Solver
 {
@@ -20,153 +21,378 @@ public:
 	Solver(const path& _path)
 	{
 		initDomainData(_path);
-		buildDomain();
 
 		auto&& [ig, jg] = generatePortrait();
 		m_A.setIg(ig); m_A.setJg(jg);
 
-		std::cout << "ig:" << std::endl;
-		for (auto i = 0; i < ig.size(); i++)
-			std::cout << ig[i] << " ";
+		SetSigmaForElements();
 
-		std::cout << std::endl << std::endl;
+		/*int kolSloi0 = 0; int kolSloi1 = 0; int kolSloi2 = 0; int kolWithAnomal = 0;
+		int kolAnomal1 = 0; int kolAnomal2 = 0;
 
-		std::cout << "jg:" << std::endl;
-		for (auto i = 0; i < jg.size(); i++)
-			std::cout << jg[i] << " ";
-
-		std::cout << std::endl << std::endl;
-		assembleMatrix();
-		assembleVector();
-
-		auto m = m_A.getDenseMatrix();
-		std::ofstream fout;
-		fout.open("dense_matrix.txt");
-		for (auto i = 0; i < m.size(); i++)
-		{
-			for (auto j = 0; j < m[0].size(); j++)
-				fout << m[i][j] << " ";
-			fout << std::endl;
-		}
-
-		//m_nodesDirichlet = nodesWithFirstConditions();
-		defineBoundsNodes();
-
-		auto _b = m_b.getV();
-
-		applyDirichlet();
-		CalculateSolution();
-
-		std::cout << std::endl;
-		std::cout << std::endl;
-
-		std::cout << "b:" << std::endl;
-		 _b = m_b.getV();
-		for (auto i = 0; i < _b.size(); i++)
-			std::cout << _b[i] << " ";
-
-		std::cout << std::endl;
-		std::cout << std::endl;
-
-		std::cout << "ggl:" << std::endl;
-		auto ggl = m_A.getGgl();
-		for (auto i = 0; i < ggl.size(); i++)
-			std::cout << i << " " << ggl[i] << std::endl;
-		std::cout << ggl.size();
-
-		std::cout << std::endl;
-
-		std::cout << "\n\ndi:" << std::endl;
-		auto di = m_A.getDi();
-		for (auto i = 0; i < di.size(); i++)
-			std::cout << di[i] << std::endl;
-
-		std::cout << std::endl;
-		std::cout << std::endl;
-
-		std::cout << "q_moe:" << std::endl;
-		for (auto i = 0; i < m_Solution.size(); i++)
-		{
-			std::cout << m_Solution[i] << " ";
-		}
-
-		std::cout << std::endl;
-
-
-		vector<double> q(m_Solution.size(), 0.0);
 		for (auto i = 0; i < m_Elements.size(); i++)
 		{
-			for (auto j = 0; j < m_Elements[i].nodes.size(); j++)
+			if (m_Elements[i].sigma == 0.03)
 			{
-				q[m_Elements[i].nodes[j].num] = u(m_Elements[i].nodes[j].p);
+				kolSloi0++;
+			}
+			else if (m_Elements[i].sigma == 0.1)
+				kolSloi1++;
+			else if (m_Elements[i].sigma == 0.2)
+				kolSloi2++;
+			else if (m_Elements[i].sigma == 0.04)
+				kolAnomal1++;
+			else if (m_Elements[i].sigma == 0.05)
+				kolAnomal2++;
+			else
+			{
+				std::cout << i << " " << m_Elements[i].sigma << std::endl;
+				kolWithAnomal++;
 			}
 		}
 
-		std::cout << "solution | q_moe" << std::endl;
-		for (auto i = 0; i < m_Solution.size(); i++)
+		std::cout << "Kol-vo el v 1 sloe: " << kolSloi0 << std::endl;
+		std::cout << "Kol-vo el v 2 sloe: " << kolSloi1 << std::endl;
+		std::cout << "Kol-vo el v 3 sloe: " << kolSloi2 << std::endl;
+		std::cout << "Kol-vo el v 1 AO: " << kolAnomal1 << std::endl;
+		std::cout << "Kol-vo el v 2 AO: " << kolAnomal2 << std::endl;
+		std::cout << "Kol-vo el, kot peresekautsa s AO: " << kolWithAnomal << std::endl;
+		*/
+
+		auto ak = m_Elements[7541];
+		assembleMatrix();
+		assembleVector();
+
+		defineBoundsNodes();
+
+
+		applyNeumann();
+		applyDirichlet();
+
+	    auto gg = m_A.getGgl(); auto di = m_A.getDi();
+		auto b = m_b.getV();
+
+		m_Solution.resize(b.size());
+		CGM_with_holes_prec(ig, jg, gg, di, b, m_Solution, b.size(), 10000, 1e-15);
+
+		/*CalculateSolution();
+
+		std::ofstream fout;
+		
+		std::cout << "X Y Z" << std::endl;
+		vector<double> q(m_Solution.size(), 0.0);
+
+		vector<Point3D> points;
+
+		for (auto r = 0; r < m_Z.size(); r++)
 		{
-			std::cout << m_Solution[i] << " " << q[i] << std::endl;
+			for (auto s = 0; s < m_Y.size(); s++)
+			{
+				for (auto p = 0; p < m_X.size(); p++)
+				{
+					double x = m_X[p]; double y = m_Y[s]; double z = m_Z[r];
+					Point3D point{ x, y, z };
+					points.push_back(point);
+				}
+			}
+		}
+
+		for (auto i = 0; i < points.size(); i++)
+		{
+			q[i] = u(points[i]);
 		}
 
 
-		std::cout << "q:" << std::endl;
-		for (auto i = 0; i < q.size(); i++)
-			std::cout << q[i] << " ";
+		for (auto i = 0; i < points.size(); i++)
+		{
+			std::cout << std::fixed << std::setprecision(3) << points[i].x << " " << points[i].y << " " << points[i].z << std::endl;
+		}*/
+
+		std::cout << std::endl << "solution" << std::endl;
+		for (auto i = 0; i < m_Solution.size(); i++)
+		{
+			std::cout << std::setprecision(15) << std::scientific << m_Solution[i] << std::endl;
+		}
 
 	};
 	
 
 private:
-	vector<Point3D> m_ref_plane; // Plane of reference.
-	vector<Anomaly> m_anomal;
-	vector<Layer> m_layers;
-	vector<Source> m_sources;
-	vector<Receiver> m_receivers;
+	vector<Point2D> m_ref_plane; // РєР»Р°СЃСЃ Domain
+	vector<Anomaly> m_anomal; // РєР»Р°СЃСЃ Domain
+	vector<Layer> m_layers; // РєР»Р°СЃСЃ Domain
+	vector<Source> m_sources; // РєР»Р°СЃСЃ Domain
+	vector<Receiver> m_receivers; // РєР»Р°СЃСЃ Domain
 
-	vector<Element> m_Elements;
 
-	MatrixSparse m_A;
-	Vector m_b;
+	MatrixSparse m_A; // РѕСЃРЅРѕРІРЅРѕР№ РєР»Р°СЃСЃ FemSolver (РёР»Рё С‡С‚Рѕ-С‚Рѕ С‚РёРїР° С‚Р°РєРѕРіРѕ РЅР°Р·РІР°РЅРёСЏ)
+	Vector m_b; // РѕСЃРЅРѕРІРЅРѕР№ РєР»Р°СЃСЃ FemSolver (РёР»Рё С‡С‚Рѕ-С‚Рѕ С‚РёРїР° С‚Р°РєРѕРіРѕ РЅР°Р·РІР°РЅРёСЏ)
+	vector<double> m_Solution; // РѕСЃРЅРѕРІРЅРѕР№ РєР»Р°СЃСЃ FemSolver (РёР»Рё С‡С‚Рѕ-С‚Рѕ С‚РёРїР° С‚Р°РєРѕРіРѕ РЅР°Р·РІР°РЅРёСЏ)
 
-	vector<Node> m_nodesDirichlet;
-	vector<Node> m_nodesNeumann;
-
-	vector<int> m_boundCond; // вектор из 6 элементов, где каждой из 6 граней ставится в соответствие свой тип КУ. 
-
-	vector<double> m_zGrid;
-	vector<double> m_xGrid;
-	vector<double> m_yGrid;
-
-	vector<double> m_Solution;
+	vector<Node> m_nodesDirichlet; // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	vector<vector<Node>> m_nodesNeumann; // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	vector<int> m_boundCond; // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	vector<double> m_Z; // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	vector<double> m_X; // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	vector<double> m_Y; // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	vector<Element> m_Elements; // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
 
 
 private:
-	void initDomainData(const path& _path);
-	void buildZGrid();
-	void defineGlobalNumbers();
-	void buildDomain(); // название потом придумаю. чтобы в конструкторе не было всякой лишней фигни типа построения сетки
+	void initDomainData(const path& _path); // РєР»Р°СЃСЃ Domain
 
-	void CalculateSolution();
 
-	Matrix buildLocalG(double hx, double hy, double hz, double sigma);
-	Matrix buildLocalC(double hx, double hy, double hz);
+	void CalculateSolution(); // РѕСЃРЅРѕРІРЅРѕР№ РєР»Р°СЃСЃ FemSolver (РёР»Рё С‡С‚Рѕ-С‚Рѕ С‚РёРїР° С‚Р°РєРѕРіРѕ РЅР°Р·РІР°РЅРёСЏ)
+	void assembleMatrix(); // РѕСЃРЅРѕРІРЅРѕР№ РєР»Р°СЃСЃ FemSolver (РёР»Рё С‡С‚Рѕ-С‚Рѕ С‚РёРїР° С‚Р°РєРѕРіРѕ РЅР°Р·РІР°РЅРёСЏ)
+	void assembleVector(); // РѕСЃРЅРѕРІРЅРѕР№ РєР»Р°СЃСЃ FemSolver (РёР»Рё С‡С‚Рѕ-С‚Рѕ С‚РёРїР° С‚Р°РєРѕРіРѕ РЅР°Р·РІР°РЅРёСЏ)
+	Matrix buildLocalG(double hx, double hy, double hz, double sigma); // РѕСЃРЅРѕРІРЅРѕР№ РєР»Р°СЃСЃ FemSolver (РёР»Рё С‡С‚Рѕ-С‚Рѕ С‚РёРїР° С‚Р°РєРѕРіРѕ РЅР°Р·РІР°РЅРёСЏ)
+	Matrix buildLocalC(double hx, double hy, double hz); // РѕСЃРЅРѕРІРЅРѕР№ РєР»Р°СЃСЃ FemSolver (РёР»Рё С‡С‚Рѕ-С‚Рѕ С‚РёРїР° С‚Р°РєРѕРіРѕ РЅР°Р·РІР°РЅРёСЏ)
+	void applyDirichlet(); // РѕСЃРЅРѕРІРЅРѕР№ РєР»Р°СЃСЃ FemSolver (РёР»Рё С‡С‚Рѕ-С‚Рѕ С‚РёРїР° С‚Р°РєРѕРіРѕ РЅР°Р·РІР°РЅРёСЏ)
+	void applyNeumann(); // РѕСЃРЅРѕРІРЅРѕР№ РєР»Р°СЃСЃ FemSolver (РёР»Рё С‡С‚Рѕ-С‚Рѕ С‚РёРїР° С‚Р°РєРѕРіРѕ РЅР°Р·РІР°РЅРёСЏ)
+	void performGaussianReduction(); // СЌС‚Рѕ С‚РѕР¶Рµ Р±СѓРґРµС‚ РІ FEMSolver, РЅРѕ РїСЂРёРІР°С‚РЅРѕР№?
+	void reduceRow(int row); // СЌС‚Рѕ С‚РѕР¶Рµ Р±СѓРґРµС‚ РІ FEMSolver, РЅРѕ РїСЂРёРІР°С‚РЅРѕР№?
+	std::pair<vector<int>, vector<int>> generatePortrait(); // СЌС‚Рѕ С‚РѕР¶Рµ Р±СѓРґРµС‚ РІ FEMSolver, РЅРѕ РїСЂРёРІР°С‚РЅРѕР№? РёР»Рё РїСЂРѕСЃС‚Рѕ РІ Functions РµРµ Р·Р°РїРёС…Р°С‚СЊ?
 
-	std::pair<vector<int>, vector<int>> generatePortrait(); // наверное, стоит ее отсюда убрать, ну потому что что-то не так...
 
-	void assembleMatrix();
-	void assembleVector();
+	void defineBoundsNodes(); // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	void defineGlobalNumbers(); // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	void SetSigmaForElements(); // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	void defineFirstBoundNodes(int start, int elementWithWhichLastRowBegins, vector<int>& locNums, int addition, Bound facet, int dim); // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	void defineSecondBoundNodes(int start, int elementWithWhichLastRowBegins, vector<int>& locNums, int addition, Bound facet, int dim); // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	void buildZGrid(const path& _path); // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	void buildXGrid(const path& _path); // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	void buildYGrid(const path& _path); // С‡С‚Рѕ-С‚Рѕ С‚РёРїР° РєР»Р°СЃСЃР° (РЅР°Р·РІР°РЅРёРµ РїРѕС‚РѕРј РїСЂРёРґСѓРјР°СЋ) FEMDomain
+	void buildDomain(const path& _path); // РєР»Р°СЃСЃ FEMDomain
 
-	void reduceRow(int row);
 
-	void defineBoundsNodes();  // для каждой из  граней в соответствии с типом ку для этой грани, определяет узлы (очинь панятна).
-	void defineBoundaryNodes(int start, int elementWithWhichLastRowBegins, vector<int>& locNums, int addition, Bound facet, int dim); // функцию сверху и снизу надо объеденить в одну, когда буду перписывать на c#
 
-	void performGaussianReduction();
-	void applyDirichlet();
+	double GetVForIntersectionLayer(double h, Element e); // СЃС‚Р°С‚РёС‡РµСЃРєРёР№ РєР»Р°СЃСЃ Functions
+	double GetVForIntersectionAnomaly(Element e, Anomaly a); // СЃС‚Р°С‚РёС‡РµСЃРєРёР№ РєР»Р°СЃСЃ Functions
+	double GetVElement(Element e); // СЃС‚Р°С‚РёС‡РµСЃРєРёР№ РєР»Р°СЃСЃ Functions
+	Point3D GetPoint(int p, int s, int r); // СЃС‚Р°С‚РёС‡РµСЃРєРёР№ РєР»Р°СЃСЃ Functions
+	vector<Point3D> GetAnomalyPoints(Anomaly a); // СЃС‚Р°С‚РёС‡РµСЃРєРёР№ РєР»Р°СЃСЃ Functions
 
-	vector<double> buildXGrid();
-	vector<double> buildYGrid();
 };
+
+vector<Point3D> Solver::GetAnomalyPoints(Anomaly a)
+{
+	vector<Point3D> points(8);
+	points[0] = Point3D{ a.ref_plane[0].x, a.ref_plane[0].y, a.z0 };
+	points[1] = Point3D{ a.ref_plane[1].x, a.ref_plane[1].y, a.z0 };
+	points[2] = Point3D{ a.ref_plane[2].x, a.ref_plane[2].y, a.z0 };
+	points[3] = Point3D{ a.ref_plane[3].x, a.ref_plane[3].y, a.z0 };
+
+	points[4] = Point3D{ a.ref_plane[0].x, a.ref_plane[0].y, a.z1 };
+	points[5] = Point3D{ a.ref_plane[1].x, a.ref_plane[1].y, a.z1 };
+	points[6] = Point3D{ a.ref_plane[1].x, a.ref_plane[2].y, a.z1 };
+	points[7] = Point3D{ a.ref_plane[3].x, a.ref_plane[3].y, a.z1 };
+
+	return points;
+}
+
+double Solver::GetVForIntersectionAnomaly(Element e, Anomaly a)
+{
+	vector<double> x, y, z;
+	vector<Point3D> points; // С‚РµРїРµСЂСЊ С‚СѓС‚ РєРѕРѕСЂРґРёРЅР°С‚С‹ РІСЃРµС… СѓР·Р»РѕРІ РєРѕРЅРµС‡РЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р°
+
+	for (auto i = 0; i < e.nodes.size(); i++)
+		points.push_back(GetPoint(e.nodes[i].p, e.nodes[i].s, e.nodes[i].r));
+
+	x.push_back(a.ref_plane[0].x); x.push_back(a.ref_plane[1].x); 
+	x.push_back(points[0].x); x.push_back(points[1].x);
+	std::sort(x.begin(), x.end());
+
+	y.push_back(a.ref_plane[0].y); y.push_back(a.ref_plane[2].y);
+	y.push_back(points[0].y); y.push_back(points[2].y);
+	std::sort(y.begin(), y.end());
+
+	z.push_back(a.z0); z.push_back(a.z1);
+	z.push_back(points[0].z); z.push_back(points[4].z);
+	std::sort(z.begin(), z.end());
+
+	double h = z[2] - z[1];
+	double sOsn = (x[2] - x[1]) * (y[2] - y[1]);
+
+	return (1. / 3.) * sOsn * h;
+}
+
+double Solver::GetVElement(Element e)
+{
+	double sOsn = (m_X[e.nodes[1].p] - m_X[e.nodes[0].p]) * (m_Y[e.nodes[2].s] - m_Y[e.nodes[0].s]);
+	double h = m_Z[e.nodes[4].r] - m_Z[e.nodes[0].r];
+	return (1. / 3) * sOsn * h;
+}
+
+double Solver::GetVForIntersectionLayer(double h, Element e)
+{
+	double sOsn = (m_X[e.nodes[1].p] - m_X[e.nodes[0].p]) * (m_Y[e.nodes[2].s] - m_Y[e.nodes[0].s]);
+	return (1. / 3.) * sOsn * h;
+}
+
+void Solver::SetSigmaForElements()
+{
+	vector<vector<Anomaly>> anomaliesWithWhichFiniteElementIntersects(m_Elements.size());
+	//int inNulLayer = 0; int inFirstLayer = 0;
+
+	for (auto i = 0; i < m_Elements.size(); i++)
+	{
+		bool intersectWithAnomal = false;
+		for (auto j = 0; j < m_anomal.size(); j++)
+		{
+			int indicator = 0;
+			vector<Point3D> pointsEl(8);
+			vector<Point3D> pointsAnomaly = GetAnomalyPoints(m_anomal[j]);
+
+			for (auto l = 0; l < m_Elements[i].nodes.size(); l++)
+			{
+				auto p = GetPoint(m_Elements[i].nodes[l].p, m_Elements[i].nodes[l].s, m_Elements[i].nodes[l].r);
+				pointsEl[l] = p;
+				indicator += isPointInsideAnomaly(p, m_anomal[j]);
+			}
+
+			// РљР­ РїРѕР»РЅРѕСЃС‚СЊСЋ Р»РµР¶РёС‚ РІ РђРћ.
+			if (indicator == 8)
+			{
+				m_Elements[i].sigma = m_anomal[j].sigma;
+				intersectWithAnomal = true;
+				break; // Р·Р°С‡РµРј РЅР°Рј РґР°Р»СЊС€Рµ РїСЂРѕРІРµСЂСЏС‚СЊ РїСЂРёРЅР°РґР»РµР¶РЅРѕСЃС‚СЊ РљР­ РґСЂСѓРіРёРј РђРћ, РµСЃР»Рё РѕРЅ СѓР¶Рµ РїРѕР»РЅРѕСЃС‚СЊСЋ СЃРѕРґРµСЂР¶РёС‚СЃСЏ РІ РѕРґРЅРѕРј РёР· РђРћ.
+			}
+
+			if (doParallelepipedsIntersect(pointsEl, pointsAnomaly))
+			{
+				intersectWithAnomal = true;
+				anomaliesWithWhichFiniteElementIntersects[i].push_back(m_anomal[j]);
+
+				//if (j == 0)
+				//{
+				//	std::cout << "intersect with AO in null-layer " << ++inNulLayer << std::endl;
+				//}
+				//else if (j == 1)
+				//{
+				//	std::cout << "intersect with AO in first-layer " << ++inFirstLayer << std::endl;
+				//}
+			}
+		}
+
+		if (!intersectWithAnomal)
+		{
+			/*СЃРјРѕС‚СЂРёРј, РєР°РєРѕРјСѓ СЃР»РѕСЋ (РёР»Рё СЃР»РѕСЏРј) РїСЂРёРЅР°РґР»РµР¶РёС‚ РљР­*/
+			for (auto l = 0; l < m_layers.size(); l++)
+			{
+				bool isBelong = isElementBelongsLayer(m_layers[l], m_Z[m_Elements[i].nodes[0].r], m_Z[m_Elements[i].nodes[4].r]);
+				if (isBelong)
+				{
+					m_Elements[i].sigma = m_layers[l].sigma;
+					isBelong = true;
+					break;
+				}
+			}
+		}
+	}
+
+	/*int num = 0;
+	for (auto k = 0; k < anomaliesWithWhichFiniteElementIntersects.size(); k++)
+	{
+		if (anomaliesWithWhichFiniteElementIntersects[k].size() != 0)
+			num++;
+	}
+
+	std::cout << std::endl << "kol-vo el kot intersect s ao: " << num << std::endl;*/
+
+	for (auto i = 0; i < anomaliesWithWhichFiniteElementIntersects.size(); i++)
+	{
+		if (anomaliesWithWhichFiniteElementIntersects[i].size() != 0) // СЃС‡РёС‚Р°РµРј РґРѕР»СЋ РѕР±СЉРµРјР° РѕС‚ РєР°Р¶РґРѕРіРѕ РђРћ Рё РѕС‚ РєР°Р¶РґРѕРіРѕ СЃР»РѕСЏ, СЃРѕРґРµСЂР¶Р°С‰РµРіРѕ РђРћ.
+		{
+			/*Р·РЅР°С‡РёС‚, С‡С‚Рѕ РљР­ Р»РµР¶РёС‚ РІ РѕРґРЅРѕРј СЃР»РѕРµ Рё РїРµСЂРµСЃРµРєР°РµС‚СЃСЏ СЃ РєР°РєРёРј-С‚Рѕ РєРѕР»РёС‡РµСЃС‚РІРѕРј РђРћ.*/
+			auto layer = anomaliesWithWhichFiniteElementIntersects[i][0].layer_number;
+			double vEl = GetVElement(m_Elements[i]);
+			double vFromLayer = vEl;
+
+			m_Elements[i].sigma = 0;
+			for (auto l = 0; l < anomaliesWithWhichFiniteElementIntersects[i].size(); l++)
+			{
+				double V = GetVForIntersectionAnomaly(m_Elements[i], anomaliesWithWhichFiniteElementIntersects[i][l]);
+				vFromLayer -= V;
+				m_Elements[i].sigma += (V / vEl) * anomaliesWithWhichFiniteElementIntersects[i][l].sigma;
+			}
+			vFromLayer = vFromLayer / vEl;
+			m_Elements[i].sigma += vFromLayer * m_layers[layer].sigma;	
+		}
+	}
+}
+
+Point3D Solver::GetPoint(int p, int s, int r)
+{
+	auto x = m_X[p];
+	auto y = m_Y[s];
+	auto z = m_Z[r];
+	Point3D point{ x, y, z };
+
+	return point;
+}
+
+void Solver::applyNeumann()
+{
+#ifdef _SIMPLE_TESTS
+	Matrix M({ {4, 2, 2, 1}, {2, 4, 1, 2}, {2, 1, 4, 2}, {1, 2, 2, 4} });
+	vector<double> t(4, 0.0);
+	auto b = m_b.getV();
+
+	for (auto i = 0; i < m_nodesNeumann.size(); i++)
+	{
+		for (auto j = 0; j < m_nodesNeumann[i].size(); j++)
+		{
+			Point3D p = {m_X[m_nodesNeumann[i][j].p], m_Y[m_nodesNeumann[i][j].s], m_Z[m_nodesNeumann[i][j].r] };
+			t[j] = theta(p, m_nodesNeumann[i][j].bound);
+		}
+
+		double hp, hr;
+		switch (m_nodesNeumann[i][0].bound)
+		{
+		case Bound::UPPER:
+			/// РЅСѓ Рё С…СѓР№РЅСЏ, РєРѕРЅРµС‡РЅРѕ, РџРР—Р”Р•Р¦. РїРµСЂРµРґРµР»Р°С‚СЊ!!!!!!!!
+			hp = m_X[m_nodesNeumann[i][1].p] - m_X[m_nodesNeumann[i][0].p];
+			hr = m_Y[m_nodesNeumann[i][2].s] - m_Y[m_nodesNeumann[i][0].s];
+			break;
+		case Bound::FRONT:
+			hp = m_X[m_nodesNeumann[i][1].p] - m_X[m_nodesNeumann[i][0].p];
+			hr = m_Z[m_nodesNeumann[i][2].r] - m_Z[m_nodesNeumann[i][0].r];
+			break;
+		case Bound::BACK:
+			hp = m_X[m_nodesNeumann[i][1].p] - m_X[m_nodesNeumann[i][0].p];
+			hr = m_Z[m_nodesNeumann[i][2].r] - m_Z[m_nodesNeumann[i][0].r];
+			break;
+		case Bound::LEFT:
+			hp = m_Y[m_nodesNeumann[i][1].s] - m_Y[m_nodesNeumann[i][0].s];
+			hr = m_Z[m_nodesNeumann[i][2].r] - m_Z[m_nodesNeumann[i][0].r];
+			break;
+		case Bound::RIGHT:
+			hp = m_Y[m_nodesNeumann[i][1].s] - m_Y[m_nodesNeumann[i][0].s];
+			hr = m_Z[m_nodesNeumann[i][2].r] - m_Z[m_nodesNeumann[i][0].r];
+			break;
+		case Bound::LOWER:
+			hp = m_X[m_nodesNeumann[i][1].p] - m_X[m_nodesNeumann[i][0].p];
+			hr = m_Y[m_nodesNeumann[i][2].s] - m_Y[m_nodesNeumann[i][0].s];
+			break;
+		default:
+			break;
+		}
+
+		auto bLocal = M.MultMatrixByVector(t);
+		bLocal = MultVectorByNum(bLocal, (hp * hr) / 36.);
+
+		for (auto j = 0; j < m_nodesNeumann[i].size(); j++)
+		{
+			b[m_nodesNeumann[i][j].num] += bLocal[j];
+		}
+	}
+	m_b.setV(b);
+#endif
+
+#ifdef _NORMAL_TESTS
+	std::cout << std::endl;
+#endif
+}
 
 void Solver::CalculateSolution()
 {
@@ -208,31 +434,63 @@ void Solver::CalculateSolution()
 	}
 }
 
-
-void Solver::defineBoundaryNodes(int start, int elementWithWhichLastRowBegins, vector<int>& locNums, int addition, Bound facet, int dim)
+void Solver::defineSecondBoundNodes(int start, int elementWithWhichLastRowBegins, vector<int>& locNums, int addition, Bound facet, int dim)
 {
 	int endRow = start + addition * dim;
-	int condition = m_boundCond[(int)facet];
-	vector<Node>* nodes;
-	condition == 1 ? nodes = &m_nodesDirichlet : nodes = &m_nodesNeumann; // ну потому что нет у нас третьих краевых, не предусмотрены они в этой задаче.
 
-	//while (start < m_finitElements.size())
-	while(start < elementWithWhichLastRowBegins + addition)
+	while (start < elementWithWhichLastRowBegins + addition)
 	{
-		nodes->push_back(m_Elements[start].nodes[locNums[0]]);
-
 		for (auto i = start; i <= endRow; i += addition)
 		{
-			nodes->push_back(m_Elements[i].nodes[locNums[1]]);
+			vector<Node> nodes(locNums.size());
+			for (auto j = 0; j < locNums.size(); j++)
+			{
+				nodes[j] = m_Elements[i].nodes[locNums[j]];
+				nodes[j].bound = facet;
+			}
+
+			m_nodesNeumann.push_back(nodes);
 		}
 
 		switch (facet)
 		{
 		case Bound::FRONT:
-			start += (m_xGrid.size() - 1) * (m_yGrid.size() - 1);
+			start += (m_X.size() - 1) * (m_Y.size() - 1);
 			break;
 		case Bound::BACK:
-			start += (m_xGrid.size() - 1) * (m_yGrid.size() - 1);
+			start += (m_X.size() - 1) * (m_Y.size() - 1);
+			break;
+		default:
+			start = endRow + addition;
+			break;
+		}
+		endRow = start + addition * dim;
+	}
+}
+
+void Solver::defineFirstBoundNodes(int start, int elementWithWhichLastRowBegins, vector<int>& locNums, int addition, Bound facet, int dim)
+{
+	int endRow = start + addition * dim;
+
+	//while (start < m_finitElements.size())
+	while(start < elementWithWhichLastRowBegins + addition)
+	{
+		m_nodesDirichlet.push_back(m_Elements[start].nodes[locNums[0]]);
+		m_nodesDirichlet.back().bound = facet;
+
+		for (auto i = start; i <= endRow; i += addition)
+		{
+			m_nodesDirichlet.push_back(m_Elements[i].nodes[locNums[1]]);
+			m_nodesDirichlet.back().bound = facet;
+		}
+
+		switch (facet)
+		{
+		case Bound::FRONT:
+			start += (m_X.size() - 1) * (m_Y.size() - 1);
+			break;
+		case Bound::BACK:
+			start += (m_X.size() - 1) * (m_Y.size() - 1);
 			break;
 		default:
 			start = endRow + addition;
@@ -244,73 +502,86 @@ void Solver::defineBoundaryNodes(int start, int elementWithWhichLastRowBegins, v
 	start = elementWithWhichLastRowBegins;
 	endRow = start + addition * dim;
 
-	nodes->push_back(m_Elements[start].nodes[locNums[2]]);
+	m_nodesDirichlet.push_back(m_Elements[start].nodes[locNums[2]]);
+	m_nodesDirichlet.back().bound = facet;
 	for (auto i = start; i <= endRow; i += addition)
 	{
-		nodes->push_back(m_Elements[i].nodes[locNums[3]]);
+		m_nodesDirichlet.push_back(m_Elements[i].nodes[locNums[3]]);
+		m_nodesDirichlet.back().bound = facet;
 	}
 }
 
+// РЅРµ С„СѓРЅРєС†РёСЏ Р° РїСЂРѕСЃС‚Рѕ СѓР¶Р°СЃСЃ
 void Solver::defineBoundsNodes()
 {
 	Bound facet = Bound::FRONT;
 	int start = 0;
-	int elementWithWhichLastRowBegins = (m_xGrid.size() - 1) * (m_yGrid.size() - 1) * (m_zGrid.size() - 2);
+	int elementWithWhichLastRowBegins = (m_X.size() - 1) * (m_Y.size() - 1) * (m_Z.size() - 2);
 	vector<int> locNums = { 0, 1, 4, 5 };
 	int addition = 1;
-	int dim = m_xGrid.size() - 2;
-	defineBoundaryNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	int dim = m_X.size() - 2;
+	int condition = m_boundCond[0];
+	if (condition == 1)
+		defineFirstBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	else if (condition == 2)
+		defineSecondBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
 
 	facet = Bound::BACK;
-	start = (m_xGrid.size() - 1) * (m_yGrid.size() - 2);
-	elementWithWhichLastRowBegins = (m_xGrid.size() - 1) * ((m_yGrid.size() - 1) * (m_zGrid.size() - 1) - 1);
+	start = (m_X.size() - 1) * (m_Y.size() - 2);
+	elementWithWhichLastRowBegins = (m_X.size() - 1) * ((m_Y.size() - 1) * (m_Z.size() - 1) - 1);
 	locNums = {2, 3, 6, 7};
-	defineBoundaryNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	condition = m_boundCond[1];
+	if (condition == 1)
+		defineFirstBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	else if (condition == 2)
+		defineSecondBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
 
 	facet = Bound::LEFT;
 	start = 0;
-	elementWithWhichLastRowBegins = (m_xGrid.size() - 1) * (m_yGrid.size() - 1) * (m_zGrid.size() - 2);
+	elementWithWhichLastRowBegins = (m_X.size() - 1) * (m_Y.size() - 1) * (m_Z.size() - 2);
 	locNums = { 0, 2, 4, 6 };
-	addition = m_xGrid.size() - 1;
-	dim = m_yGrid.size() - 2; // поч не эм икс??
-	defineBoundaryNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	addition = m_X.size() - 1;
+	dim = m_Y.size() - 2; // РїРѕС‡ РЅРµ СЌРј РёРєСЃ??
+	condition = m_boundCond[2];
+	if (condition == 1)
+		defineFirstBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	else if (condition == 2)
+		defineSecondBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
 
 	facet = Bound::RIGHT;
-	start = m_xGrid.size() - 2;
-	elementWithWhichLastRowBegins = (m_xGrid.size() - 1) * (m_yGrid.size() - 1) * (m_zGrid.size() - 2) + (m_xGrid.size() - 2); // как я это вывела?))
+	start = m_X.size() - 2;
+	elementWithWhichLastRowBegins = (m_X.size() - 1) * (m_Y.size() - 1) * (m_Z.size() - 2) + (m_X.size() - 2); // РєР°Рє СЏ СЌС‚Рѕ РІС‹РІРµР»Р°?))
 	locNums = { 1, 3, 5, 7 };
-	defineBoundaryNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	condition = m_boundCond[3];
+	if (condition == 1)
+		defineFirstBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	else if (condition == 2)
+		defineSecondBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
 
 	facet = Bound::LOWER;
 	start = 0;
-	elementWithWhichLastRowBegins = (m_xGrid.size() - 1) * (m_yGrid.size() - 2);
+	elementWithWhichLastRowBegins = (m_X.size() - 1) * (m_Y.size() - 2);
 	locNums = { 0, 1, 2, 3 };
 	addition = 1;
-	dim = m_xGrid.size() - 2;
-	defineBoundaryNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	dim = m_X.size() - 2;
+	condition = m_boundCond[4];
+	if (condition == 1)
+		defineFirstBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	else if (condition == 2)
+		defineSecondBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+
 
 	facet = Bound::UPPER;
-	start = (m_xGrid.size() - 1) * (m_yGrid.size() - 1) * (m_zGrid.size() - 2);
-	elementWithWhichLastRowBegins = (m_xGrid.size() - 1) * ((m_yGrid.size() - 1) * (m_zGrid.size() - 1) - 1);
+	start = (m_X.size() - 1) * (m_Y.size() - 1) * (m_Z.size() - 2);
+	elementWithWhichLastRowBegins = (m_X.size() - 1) * ((m_Y.size() - 1) * (m_Z.size() - 1) - 1);
 	locNums = { 4, 5, 6, 7 };
-	defineBoundaryNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	condition = m_boundCond[5];
+	if (condition == 1)
+		defineFirstBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
+	else if (condition == 2)
+		defineSecondBoundNodes(start, elementWithWhichLastRowBegins, locNums, addition, facet, dim);
 
 	removeDuplicate(m_nodesDirichlet);
-	removeDuplicate(m_nodesNeumann);
-
-	//auto buf = 0;
-	//for (auto i = 0; i < m_nodesDirichlet.size() - 1; i++)
-	//{
-	//	for (auto j = i + 1; j < m_nodesDirichlet.size(); j++)
-	//	{
-	//		if (m_nodesDirichlet[i] == m_nodesDirichlet[j])
-	//		{
-	//			std::cout << m_nodesDirichlet[i] << " " << m_nodesDirichlet[j] << std::endl;
-	//			buf++;
-	//		}
-	//	}
-	//}
-	//std::cout << std::endl << buf;
 }
 
 void Solver::applyDirichlet()
@@ -319,7 +590,9 @@ void Solver::applyDirichlet()
 
 	for (auto node : m_nodesDirichlet)
 	{
-		b[node.num] = u(node.p);
+		auto point = GetPoint(node.p, node.s, node.r);
+
+		b[node.num] = u(point);
 	}
 
 	m_b.setV(b);
@@ -377,49 +650,49 @@ void Solver::performGaussianReduction()
 	}
 }
 
-// пока что учет только точки А!!! СПРОСИТЬ
+// РїРѕРєР° С‡С‚Рѕ СѓС‡РµС‚ С‚РѕР»СЊРєРѕ С‚РѕС‡РєРё Рђ!!! РЎРџР РћРЎРРўР¬
 void Solver::assembleVector()
 {
-	vector<double> globB(m_xGrid.size() * m_yGrid.size() * m_zGrid.size(), 0.0);
+	vector<double> globB(m_X.size() * m_Y.size() * m_Z.size(), 0.0);
+
 #ifdef _NORMAL_TESTS
 	for (auto i = 0; i < m_sources.size(); i++)
 	{
-		auto globNums = m_finitElements[m_sources[i].elA].globalNumbers;
-		double xp = m_xGrid[m_sources[i].pA]; double xp1 = m_xGrid[m_sources[i].pA + 1]; ;
+		auto globNums = m_Elements[m_sources[i].elA].nodes;
+
+		double xp = m_X[globNums[4].p]; double xp1 = m_X[globNums[5].p]; ;
 		double hx = xp1 - xp;
 
-		double ys = m_yGrid[m_sources[i].sA]; double ys1 = m_yGrid[m_sources[i].sA + 1]; ;
+		double ys = m_Y[globNums[4].s]; double ys1 = m_Y[globNums[6].s]; ;
 		double hy = ys1 - ys;
 
-		globB[globNums[4]] += X_func(0, m_sources[i].A.x, xp1, hx) * Y_func(0, m_sources[i].A.y, ys1, hy);
-		globB[globNums[5]] += X_func(1, m_sources[i].A.x, xp, hx) * Y_func(0, m_sources[i].A.y, ys1, hy);
-		globB[globNums[6]] += X_func(0, m_sources[i].A.x, xp1, hx) * Y_func(1, m_sources[i].A.y, ys, hy);
-		globB[globNums[7]] += X_func(1, m_sources[i].A.x, xp, hx) * Y_func(1, m_sources[i].A.y, ys, hy);
+		globB[globNums[4].num] += X_func(0, m_sources[i].A.x, xp1, hx) * Y_func(0, m_sources[i].A.y, ys1, hy);
+		globB[globNums[5].num] += X_func(1, m_sources[i].A.x, xp, hx) * Y_func(0, m_sources[i].A.y, ys1, hy);
+		globB[globNums[6].num] += X_func(0, m_sources[i].A.x, xp1, hx) * Y_func(1, m_sources[i].A.y, ys, hy);
+		globB[globNums[7].num] += X_func(1, m_sources[i].A.x, xp, hx) * Y_func(1, m_sources[i].A.y, ys, hy);
+	}
+
+	for (auto i = 0; i < m_sources.size(); i++)
+	{
+		auto globNums = m_Elements[m_sources[i].elB].nodes;
+
+		double xp = m_X[globNums[4].p]; double xp1 = m_X[globNums[5].p]; ;
+		double hx = xp1 - xp;
+
+		double ys = m_Y[globNums[4].s]; double ys1 = m_Y[globNums[6].s]; ;
+		double hy = ys1 - ys;
+
+		globB[globNums[4].num] += X_func(0, m_sources[i].B.x, xp1, hx) * Y_func(0, m_sources[i].B.y, ys1, hy);
+		globB[globNums[5].num] += X_func(1, m_sources[i].B.x, xp, hx) * Y_func(0, m_sources[i].B.y, ys1, hy);
+		globB[globNums[6].num] += X_func(0, m_sources[i].B.x, xp1, hx) * Y_func(1, m_sources[i].B.y, ys, hy);
+		globB[globNums[7].num] += X_func(1, m_sources[i].B.x, xp, hx) * Y_func(1, m_sources[i].B.y, ys, hy);
 	}
 #endif
 
-//#ifdef _SIMPLE_TESTS
-//	
-//
-//#endif
-
-	// потому что на трилинейных базисных функциях, так как в задаче нет матрицы массы, глобальный вектор б до учета краевых всегда будет нулевой.
-	// естесственно, если делать тесты на линейных полиномах, потому что на полиномах более высокой степени уже не факт, что решение будет достаточно
-	// точным.
-	m_b.setV(globB); 
-}
-
-void Solver::assembleMatrix()
-{
-	vector<int> ig = m_A.getIg();
-	vector<int> jg = m_A.getJg();
-
-	vector<double> di(m_xGrid.size() * m_yGrid.size() * m_zGrid.size(), 0.0);
-	vector<double> ggl(jg.size(), 0.0);
-
-	int nx = m_xGrid.size();
-	int ny = m_yGrid.size();
-	int nz = m_zGrid.size();
+#ifdef _SIMPLE_TESTS
+	int nx = m_X.size();
+	int ny = m_Y.size();
+	int nz = m_Z.size();
 
 	int nEl = 0;
 	for (auto r = 0; r < nz - 1; r++)
@@ -428,9 +701,59 @@ void Solver::assembleMatrix()
 		{
 			for (auto p = 0; p < nx - 1; p++)
 			{
-				double hx = m_xGrid[p + 1] - m_xGrid[p];
-				double hy = m_yGrid[s + 1] - m_yGrid[s];
-				double hz = m_zGrid[r + 1] - m_zGrid[r];
+				double hx = m_X[p + 1] - m_X[p];
+				double hy = m_Y[s + 1] - m_Y[s];
+				double hz = m_Z[r + 1] - m_Z[r];
+
+				auto localC = buildLocalC(hx, hy, hz);
+				auto glob_nums = m_Elements[nEl].nodes;
+
+				vector<double> _f(glob_nums.size());
+
+				for (auto i = 0; i < _f.size(); i++)
+				{
+					auto p = GetPoint(glob_nums[i].p, glob_nums[i].s, glob_nums[i].r);
+					_f[i] = f(p);
+				}
+
+				auto localB = localC.MultMatrixByVector(_f);
+
+
+				for (auto i = 0; i < m_Elements[nEl].nodes.size(); i++)
+				{
+					globB[glob_nums[i].num] += localB[i];
+				}
+				nEl++;
+			}
+		}
+	}
+#endif
+
+	m_b.setV(globB); 
+}
+
+void Solver::assembleMatrix()
+{
+	vector<int> ig = m_A.getIg();
+	vector<int> jg = m_A.getJg();
+
+	vector<double> di(m_X.size() * m_Y.size() * m_Z.size(), 0.0);
+	vector<double> ggl(jg.size(), 0.0);
+
+	int nx = m_X.size();
+	int ny = m_Y.size();
+	int nz = m_Z.size();
+
+	int nEl = 0;
+	for (auto r = 0; r < nz - 1; r++)
+	{
+		for (auto s = 0; s < ny - 1; s++)
+		{
+			for (auto p = 0; p < nx - 1; p++)
+			{
+				double hx = m_X[p + 1] - m_X[p];
+				double hy = m_Y[s + 1] - m_Y[s];
+				double hz = m_Z[r + 1] - m_Z[r];
 
 				Matrix local = buildLocalG(hx, hy, hz, m_Elements[nEl].sigma);
 				auto glob_nums = m_Elements[nEl].nodes;
@@ -466,7 +789,7 @@ void Solver::assembleMatrix()
 
 std::pair<vector<int>, vector<int>> Solver::generatePortrait()
 {
-	int N = m_xGrid.size() * m_yGrid.size() * m_zGrid.size(); // число глобальных б/ф (количество узлов)
+	int N = m_X.size() * m_Y.size() * m_Z.size(); // С‡РёСЃР»Рѕ РіР»РѕР±Р°Р»СЊРЅС‹С… Р±/С„ (РєРѕР»РёС‡РµСЃС‚РІРѕ СѓР·Р»РѕРІ)
 
 	uint32_t bigNumberWhichIDontKnowButMoreIThinkAboutItMoreItSeemsToBeLessThanNTimes8 = N * 20;
 	vector<vector<uint32_t>> list(2, std::vector<uint32_t>(bigNumberWhichIDontKnowButMoreIThinkAboutItMoreItSeemsToBeLessThanNTimes8, 0));
@@ -610,17 +933,17 @@ Matrix Solver::buildLocalG(double hx, double hy, double hz, double sigma)
 }
 
 /// <summary>
-/// В соответствие локальной нумерациеи базисных 
-/// функций на элементе ставит номер глобальной функции. 
-/// Создает список конечных элементов. А ЕЩЕ находит, к какому 
-/// конечному элементу приналежат точки источника.
+/// Р’ СЃРѕРѕС‚РІРµС‚СЃС‚РІРёРµ Р»РѕРєР°Р»СЊРЅРѕР№ РЅСѓРјРµСЂР°С†РёРµРё Р±Р°Р·РёСЃРЅС‹С… 
+/// С„СѓРЅРєС†РёР№ РЅР° СЌР»РµРјРµРЅС‚Рµ СЃС‚Р°РІРёС‚ РЅРѕРјРµСЂ РіР»РѕР±Р°Р»СЊРЅРѕР№ С„СѓРЅРєС†РёРё. 
+/// РЎРѕР·РґР°РµС‚ СЃРїРёСЃРѕРє РєРѕРЅРµС‡РЅС‹С… СЌР»РµРјРµРЅС‚РѕРІ. Рђ Р•Р©Р• РЅР°С…РѕРґРёС‚, Рє РєР°РєРѕРјСѓ 
+/// РєРѕРЅРµС‡РЅРѕРјСѓ СЌР»РµРјРµРЅС‚Сѓ РїСЂРёРЅР°Р»РµР¶Р°С‚ С‚РѕС‡РєРё РёСЃС‚РѕС‡РЅРёРєР°.
 /// </summary>
 /// <returns></returns>
 void Solver::defineGlobalNumbers()
 {
-	int nx = m_xGrid.size();
-	int ny = m_yGrid.size();
-	int nz = m_zGrid.size();
+	int nx = m_X.size();
+	int ny = m_Y.size();
+	int nz = m_Z.size();
 
 	m_Elements.resize((nx - 1) * (ny - 1) * (nz - 1));
 
@@ -635,7 +958,7 @@ void Solver::defineGlobalNumbers()
 			for (auto p = 0; p < nx - 1; p++)
 			{
 				m_Elements[elN] = GetNumbers(p, s, r, nx, ny);
-				SetCoord(m_xGrid, m_yGrid, m_zGrid, p, s, r, m_Elements[elN++]);
+				SetCoord(p, s, r, m_Elements[elN++]);
 			}	
 		}
 	}
@@ -647,7 +970,7 @@ void Solver::defineGlobalNumbers()
 		for (auto p = 0; p < nx - 1; p++)
 		{
 			m_Elements[elN] = GetNumbers(p, s, r, nx, ny);
-			SetCoord(m_xGrid, m_yGrid, m_zGrid, p, s, r, m_Elements[elN++]);
+			SetCoord(p, s, r, m_Elements[elN++]);
 		}
 	}
 
@@ -663,21 +986,19 @@ void Solver::defineGlobalNumbers()
 			{
 				if (!is_found_A)
 				{
-					is_found_A = isPointInside(m_xGrid[p], m_xGrid[p + 1], m_yGrid[s], m_yGrid[s + 1], m_sources[i].A);
+					is_found_A = isPointInside(m_X[p], m_X[p + 1], m_Y[s], m_Y[s + 1], m_sources[i].A);
 					if (is_found_A)
 					{
 						m_sources[i].elA = whereToSearchPoint;
-						m_sources[i].pA = p; m_sources[i].sA = s; m_sources[i].rA = r;
 					}
 				}
 
 				if (!is_found_B)
 				{
-					is_found_B = isPointInside(m_xGrid[p], m_xGrid[p + 1], m_yGrid[s], m_yGrid[s + 1], m_sources[i].B);
+					is_found_B = isPointInside(m_X[p], m_X[p + 1], m_Y[s], m_Y[s + 1], m_sources[i].B);
 					if (is_found_B)
 					{
 						m_sources[i].elB = whereToSearchPoint;
-						m_sources[i].pB = p; m_sources[i].sB = s; m_sources[i].rB = r;
 					}
 				}
 
@@ -686,189 +1007,174 @@ void Solver::defineGlobalNumbers()
 
 				whereToSearchPoint++; 
 			}
-			if (is_found_A && is_found_B) // пипец))))
+			if (is_found_A && is_found_B) // РїРёРїРµС†))))
 				break;
 		}
 	}
 }
 
-void Solver::buildDomain()
+void Solver::buildDomain(const path& _path)
 {
 #ifdef _NORMAL_TESTS
-	buildZGrid();
-	m_xGrid = buildXGrid();
-	m_yGrid = buildYGrid();
+	buildZGrid(_path);
+	buildXGrid(_path);
+	buildYGrid(_path);
 #endif
 
 	defineGlobalNumbers();
 }
 
-vector<double> Solver::buildYGrid()
+void Solver::buildYGrid(const path& _path)
 {
-	vector<double> source_points;
-	vector<double> grid;
+	std::ifstream fin;
+	double y1, y2;
+	int numInt;
+	int subAreas;
+	double koef;
 
-	for (auto i = 0; i < m_sources.size(); i++)
+	fin.open(_path / "y_settings.txt");
+
+	if (fin.is_open())
 	{
-		source_points.push_back(m_sources[i].A.y);
-		source_points.push_back(m_sources[i].B.y);
-	}
-	removeDuplicate(source_points);
-
-	vector<double> condensation_points;
-	condensation_points.push_back(m_ref_plane[0].y);
-
-	double hs = 15.; double hb = 50.; // smoll and big step
-	for (auto i = 0; i < source_points.size(); i++)
-	{
-		condensation_points.push_back(source_points[i] - hb);
-		condensation_points.push_back(source_points[i] + hb);
-	}
-	condensation_points.push_back(m_ref_plane[1].y);
-
-	auto start = condensation_points[0]; auto end = condensation_points[1];
-	grid.push_back(condensation_points[0]);
-
-	auto build = [hb, hs, &grid](double& start, double& end, std::size_t i)
-	{
-		if (start <= end)
+		fin >> subAreas;
+		for (int i = 0; i < subAreas; i++)
 		{
-			double h;
-			i % 2 == 0 ? h = hb : h = hs;
+			fin >> y1 >> y2 >> numInt >> koef;
+			m_Y.push_back(y1);
 
-			for (auto j = 1; j <= static_cast<int>((end - start) / h); j++)
+			for (int j = numInt; j > 1; j--)
 			{
-				grid.push_back(start + j * h);
+				double geomProgression = (pow(koef, j) - 1) / (koef - 1);
+				double step = (y2 - y1) / geomProgression;
+				y1 += step;
+				m_Y.push_back(y1);
 			}
-			if (grid.back() != end)
-				grid.push_back(end);
-
-			start = end;
 		}
-	};
-
-	for (auto i = 0; i != condensation_points.size() - 2; end = condensation_points[i + 2], i++)
-	{
-		build(start, end, i);
+		m_Y.push_back(y2);
+		fin.close();
 	}
-	build(start, end, condensation_points.size() - 2);
+	else
+	{
+		std::cerr << "File y_settings.txt was not open." << std::endl;
+		std::exit(1);
+	}
 
-	/*std::ofstream fout;
+	std::ofstream fout;
 	fout.open("y.txt");
-	for (auto i = 0; i < grid.size(); i++)
+	for (auto i = 0; i < m_Y.size(); i++)
 	{
-		fout << grid[i] << std::endl;
-	}*/
-
-	return grid;
+		fout << m_Y[i] << std::endl;
+	}
+	fout.close();
 }
 
-vector<double> Solver::buildXGrid()
+void Solver::buildXGrid(const path& _path)
 {
-	vector<double> source_points;
-	vector<double> grid;
+	std::ifstream fin;
+	double x1, x2;
+	int numInt;
+	int subAreas;
+	double koef;
 
-	for (auto i = 0; i < m_sources.size(); i++)
+	fin.open(_path / "x_settings.txt");
+
+	if (fin.is_open())
 	{
-		source_points.push_back(m_sources[i].A.x);
-		source_points.push_back(m_sources[i].B.x);
-	}
-	removeDuplicate(source_points);
-
-	vector<double> condensation_points;
-	condensation_points.push_back(m_ref_plane[2].x);
-
-	double hs = 15.; double hb = 50.; // smoll and big step
-	for (auto i = 0; i < source_points.size(); i++)
-	{
-		condensation_points.push_back(source_points[i] - hb);
-		condensation_points.push_back(source_points[i] + hb);
-	}
-	condensation_points.push_back(m_ref_plane[0].x);
-
-	auto start = condensation_points[0]; auto end = condensation_points[1];
-	grid.push_back(condensation_points[0]);
-
-	auto build = [hb, hs, &grid](double& start, double& end, std::size_t i)
-	{
-		if (start <= end)
+		fin >> subAreas;
+		for (int i = 0; i < subAreas; i++)
 		{
-			double h;
-			i % 2 == 0 ? h = hb : h = hs;
+			fin >> x1 >> x2 >> numInt >> koef;
+			m_X.push_back(x1);
 
-			for (auto j = 1; j <= static_cast<int>((end - start) / h); j++)
+			for (int j = numInt; j > 1; j--)
 			{
-				grid.push_back(start + j * h);
+				double geomProgression = (pow(koef, j) - 1) / (koef - 1);
+				double step = (x2 - x1) / geomProgression;
+				x1 += step;
+				m_X.push_back(x1);
 			}
-			if (grid.back() != end)
-				grid.push_back(end);
-
-			start = end;
 		}
-	};
-
-	for (auto i = 0; i != condensation_points.size() - 2; end = condensation_points[i + 2], i++)
-	{
-		build(start, end, i);
+		m_X.push_back(x2);
+		fin.close();
 	}
-	build(start, end, condensation_points.size() - 2);
-
-	/*std::ofstream fout;
-	fout.open("x.txt");
-	for (auto i = 0; i < grid.size(); i++)
+	else
 	{
-		fout << grid[i] << std::endl;
-	}*/
+		std::cerr << "File x_settings.txt was not open." << std::endl;
+		std::exit(1);
+	}
 
-	return grid;
+	std::ofstream fout;
+	fout.open("x.txt");
+	for (auto i = 0; i < m_X.size(); i++)
+	{
+		fout << m_X[i] << std::endl;
+	}
+	fout.close();
 }
 
-void Solver::buildZGrid()
+void Solver::buildZGrid(const path& _path)
 {
 	vector<double> ref_point;
 	ref_point.push_back(m_layers[0].z0);
-
+	
 	for (auto i = 0; i < m_layers.size(); i++)
 	{
 		ref_point.push_back(m_layers[i].z1);
 	}
 
-	for (auto i = 0; i < m_anomal.size(); i++)
-	{
-		ref_point.push_back(m_anomal[i].z0);
-		ref_point.push_back(m_anomal[i].z1);
-	}
-	//m_zGrid = ref_point;
-	removeDuplicate(ref_point);
+	std::ifstream fin;
+	fin.open(_path / "z_settings.txt");
 
-	double k = 1.2;
-	double k_increase = 0.6 / (ref_point.size() - 2); // см 5ю страницу рис.
-	double h = (ref_point[1] - ref_point[0]) / 10.;    // Пусть пока так, потом надо как-то нормировать первый шаг в завис от толщины.
-	std::size_t pos = 1;
-
-	for (auto i = 0; i < ref_point.size() - 1; i++)
+	if (fin.is_open())
 	{
-		m_zGrid.push_back(ref_point[i]);
-		m_zGrid.push_back(ref_point[i] + h);
-		//std::size_t n = (std::size_t)floor((log((ref_point[i + 1]) / m_zGrid[pos]) / log(k)));
-		int n = (int)floor((log((ref_point[i + 1]) / m_zGrid[pos]) / log(k)));
-		
-		for (auto j = 0; j < n; j++)
+		int numInt;
+		double koef;
+		double x1, x2;
+
+		for (auto i = 0; i < m_layers.size() - 1; i++)
 		{
-			m_zGrid.push_back(m_zGrid[pos++] * k);
-		}
-		h = ref_point[i + 1] - m_zGrid.back();
-		k += k_increase;
-		pos += 2;
-	}	
-	m_zGrid.push_back(ref_point.back());
+			fin >> numInt;
+			x1 = ref_point[i]; 
+			x2 = ref_point[i + 1];
 
-	/*std::ofstream fout;
-	fout.open("z.txt");
-	for (auto i = 0; i < m_zGrid.size(); i++)
+			double step = (x2 - x1) / numInt;
+			m_Z.push_back(x1);
+
+			for (auto j = 0; j < numInt - 1; j++)
+			{
+				x1 += step;
+				m_Z.push_back(x1);
+			}
+		}
+
+		x1 = *(std::prev(ref_point.end(), 2));
+		x2 = ref_point.back();
+		m_Z.push_back(x1);
+
+		fin >> numInt >> koef;
+		for (int i = numInt; i > 1; i--)
+		{
+			double geomProgression = (pow(koef, i) - 1) / (koef - 1);
+			double step = (x2 - x1) / geomProgression;
+			x1 += step;
+			m_Z.push_back(x1);
+		}
+		m_Z.push_back(x2);
+		fin.close();
+	}
+	else
 	{
-		fout << m_zGrid[i] << std::endl;
-	}*/
+		std::cerr << "File z_settings.txt was not open." << std::endl;
+		std::exit(1);
+	}
+
+	std::ofstream fout;
+	fout.open("z.txt");
+	for (auto i = 0; i < m_Z.size(); i++)
+	{
+		fout << m_Z[i] << std::endl;
+	}
+	fout.close();
 }
 
 void Solver::initDomainData(const path& _path)
@@ -887,7 +1193,7 @@ void Solver::initDomainData(const path& _path)
 			}
 		};
 
-		build(m_xGrid); build(m_yGrid); build(m_zGrid);
+		build(m_X); build(m_Y); build(m_Z);
 
 		fin.close();
 	}
@@ -899,32 +1205,25 @@ void Solver::initDomainData(const path& _path)
 #endif
 
 #ifdef _NORMAL_TESTS
-	std::ifstream fin(_path / "domain.txt");
+	std::ifstream fin(_path / "layers.txt");
 	if (fin.is_open())
 	{
-		m_ref_plane.resize(4); 
-
-		for (auto i = 0; i < m_ref_plane.size(); i++)
-		{
-			fin >> m_ref_plane[i].x >> m_ref_plane[i].y >> m_ref_plane[i].z;
-		}
-
 		std::size_t size; fin >> size;
 		m_layers.resize(size);
 
 		for (auto i = 0; i < size; i++)
 		{
 			int indicator; fin >> indicator;
-			if (indicator > 0)
+			if (indicator >= 0)
 			{
-				fin >> m_layers[i].z0 >> m_layers[i].z1 >> m_layers[i].sigma;
+				fin >> m_layers[indicator].z0 >> m_layers[indicator].z1 >> m_layers[indicator].sigma;
 			}
 		}
 		fin.close();
 	}
 	else
 	{
-		std::cerr << "File domain.txt was not open." << std::endl; 
+		std::cerr << "File layers.txt was not open." << std::endl; 
 		std::exit(1);
 	}
 #endif
@@ -1013,5 +1312,6 @@ void Solver::initDomainData(const path& _path)
 		std::cerr << "File bounds.txt was not open." << std::endl;
 		std::exit(1);
 	}
+	buildDomain(_path);
 }
 #endif

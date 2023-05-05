@@ -18,11 +18,11 @@ for d in x_data:
 for d in y_data:
     plt.axhline(y=d, xmin=0, xmax=1)
 
-plt.scatter(50 , 50, c = 'deeppink')
-plt.scatter(50 , 350, c = 'deeppink')
+plt.scatter(300 , 300, c = 'deeppink')
+plt.scatter(300 , 700, c = 'deeppink')
 
-plt.scatter(300 , 200, c = 'black')
-plt.scatter(850 , 200, c = 'black')
+plt.scatter(500 , 600, c = 'orange')
+plt.scatter(600 , 600, c = 'orange')
 
 plt.grid()
 plt.show()

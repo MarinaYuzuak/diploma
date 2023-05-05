@@ -35,6 +35,20 @@ public:
 		}
 	}
 
+	vector<double> MultMatrixByVector(vector<double>& v)
+	{
+		vector<double> result(v.size(), 0.0);
+		for (auto i = 0; i < M.size(); i++)
+		{
+			for (auto j = 0; j < M[0].size(); j++)
+			{
+				result[i] += M[i][j] * v[j];
+			}
+		}
+
+		return result;
+	}
+
 	vector<vector<double>> getMatrix()
 	{
 		return M;

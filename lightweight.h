@@ -44,16 +44,16 @@ Element GetNumbers(int p, int s, int r, int nx, int ny)
 	return e;
 }
 
-void SetCoord(vector<double>& xGrid, vector<double>& yGrid, vector<double>& zGrid, int p, int s, int r, Element& e)
+void SetCoord(int p, int s, int r, Element& e)
 {
-	e.nodes[0].p = { xGrid[p], yGrid[s], zGrid[r] };
-	e.nodes[1].p = { xGrid[p + 1], yGrid[s], zGrid[r] };
-	e.nodes[2].p = { xGrid[p], yGrid[s + 1], zGrid[r] };
-	e.nodes[3].p = { xGrid[p + 1], yGrid[s + 1], zGrid[r] };
-	e.nodes[4].p = { xGrid[p], yGrid[s], zGrid[r + 1] };
-	e.nodes[5].p = { xGrid[p + 1], yGrid[s], zGrid[r + 1] };
-	e.nodes[6].p = { xGrid[p], yGrid[s + 1], zGrid[r + 1] };
-	e.nodes[7].p = { xGrid[p + 1], yGrid[s + 1], zGrid[r + 1] };
+	e.nodes[0].p = p; e.nodes[0].s = s; e.nodes[0].r = r;
+	e.nodes[1].p = p + 1; e.nodes[1].s = s; e.nodes[1].r = r;
+	e.nodes[2].p = p; e.nodes[2].s = s + 1; e.nodes[2].r = r;
+	e.nodes[3].p = p + 1; e.nodes[3].s = s + 1; e.nodes[3].r = r;
+	e.nodes[4].p = p; e.nodes[4].s = s; e.nodes[4].r = r + 1;
+	e.nodes[5].p = p + 1; e.nodes[5].s = s; e.nodes[5].r = r + 1;
+	e.nodes[6].p = p; e.nodes[6].s = s + 1; e.nodes[6].r = r + 1;
+	e.nodes[7].p = p + 1; e.nodes[7].s = s + 1; e.nodes[7].r = r + 1;
  }
 
 bool isPointInside(double x_min, double x_max, double y_min, double y_max, Point2D p)
@@ -154,6 +154,58 @@ void removeDuplicate(vector<T>& vec)
 	std::sort(vec.begin(), vec.end());
 	auto last = std::unique(vec.begin(), vec.end());
 	vec.erase(last, vec.end());
+}
+
+int isPointInsideAnomaly(Point3D p, Anomaly a)
+{
+	if ((p.z <= a.z1 && p.z >= a.z0)
+		&& (p.y <= a.ref_plane[2].y && p.y >= a.ref_plane[0].y)
+		&& (p.x <= a.ref_plane[1].x && p.x >= a.ref_plane[0].x))
+		return 1;
+	else
+		return 0;
+}
+
+/// <summary>
+/// ќпредел€ет, пересекаютс€ ли два паралеллепипеда.
+/// </summary>
+/// <param name="P1"></param>
+/// ¬осемь координат точек первого паралеллепипеда в соответствии с локальной нумерацией.
+/// <param name="P2"></param>
+/// ¬осемь координат точек второго паралеллепипеда в соответствии с локальной нумерацией.
+/// <returns></returns>
+bool doParallelepipedsIntersect(vector<Point3D> P1, vector<Point3D> P2)
+{
+	auto left1 = P1[0].x; auto left2 = P2[0].x;
+	auto right1 = P1[1].x; auto right2 = P2[1].x;
+
+	auto front1 = P1[0].y; auto front2 = P2[0].y;
+	auto back1 = P1[2].y; auto back2 = P2[2].y;
+
+	auto upper1 = P1[4].z; auto upper2 = P2[4].z;
+	auto lower1 = P1[0].z; auto lower2 = P2[0].z;
+
+	if (left1 <= right2 && right1 >= left2 && front1 <= back2 && back1 >= front2 && upper1 >= lower2 && lower1 <= upper2)
+		return true;
+	else return false;
+
+}
+
+// пока что можно считать, что эти две функции вообще не работают))))) потому что координаты плюсовые
+bool isElementIntersectLayer(double zLayer, double z0El, double z1El)
+{
+	if (z0El < zLayer && z1El > zLayer)
+		return true;
+	else
+		return false;
+}
+
+bool isElementBelongsLayer(Layer l, double z0El, double z1El)
+{
+	if (z0El >= l.z0 && z1El <= l.z1)
+		return true;
+	else
+		return false;
 }
 
 #endif
