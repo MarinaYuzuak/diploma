@@ -71,6 +71,7 @@ struct Source
 		A(_A), B(_B)
 	{}
 
+
 	Point2D A;
 	Point2D B;
 	int elA = 0; // номер конечного элемента, которому принадлежит точка А (нужно для вычисления глобального вектора b)
@@ -128,6 +129,31 @@ struct Element
 	{
 		nodes.resize(8);
 		sigma = 1;
+	}
+};
+
+struct GridSettins
+{
+	int numInt;
+	double koef;
+
+	double x1;
+	double x2;
+
+	GridSettins()
+	{
+		x1 = 0;
+		x2 = 0;
+		numInt = 0;
+		koef = 1;
+	}
+
+	GridSettins(double x1, double x2, int numInt, double koef)
+	{
+		this->x1 = x1;
+		this->x2 = x2;
+		this->numInt = numInt;
+		this->koef = koef;
 	}
 };
 

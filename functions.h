@@ -5,19 +5,12 @@
 
 double f(Point3D p)
 {
-	//return 0; // пока что. потом, наверное, switch сделать для разных тестов. это тест xyz.
-	//return -2 * p.y * p.z;
-	return sin(p.x * p.y * p.z) * p.y * p.y * p.z * p.z
-		+ sin(p.x * p.y * p.z) * p.x * p.x * p.z * p.z
-		+ sin(p.x * p.y * p.z) * p.y * p.y * p.x * p.x;
+	return -2 * p.y * p.z;
 }
 
 double u(Point3D p)
 {
-	//return p.x * p.y * p.z;
-	//return p.x * p.x * p.y * p.z + p.x * p.y * p.z;
-	//return sin(p.x * p.y * p.z);
-	return 0;
+	return p.x * p.x * p.y * p.z + p.x * p.y * p.z;
 }
 
 double theta(Point3D p, Bound facet)
@@ -25,27 +18,15 @@ double theta(Point3D p, Bound facet)
 	switch (facet)
 	{
 	case Bound::UPPER:
-		return p.x * p.y;
+		return p.x * p.x * p.y + p.x * p.y;
 	case Bound::FRONT:
-		//return -p.x * p.z;
-		//return -p.x * p.x * p.z - p.x * p.z;
-		return -cos(p.x * p.y * p.z) * p.x * p.z;
+		return -p.x * p.x * p.z - p.x * p.z;
 	case Bound::BACK:
-		//return p.x * p.z;
-		//return p.x  * p.x* p.z + p.x * p.z;
-		return cos(p.x * p.y * p.z) * p.x * p.z;
-	case Bound::LEFT:
-		//return -p.y * p.z;
-		//return -2 * p.x * p.y * p.z - p.y * p.z;
-		return -cos(p.x * p.y * p.z) * p.y * p.z;
+		return p.x  * p.x* p.z + p.x * p.z;
 	case Bound::RIGHT:
-		//return p.y * p.z;
-		//return 2 * p.x * p.y * p.z + p.y * p.z;
-		return cos(p.x * p.y * p.z) * p.y * p.z;
+		return 2 * p.x * p.y * p.z + p.y * p.z;
 	case Bound::LOWER:
-		//return -p.x * p.y;
-		//return -p.x * p.x * p.y - p.x * p.y;
-		return -cos(p.x * p.y * p.z) * p.y * p.x;
+		return -p.x * p.x * p.y - p.x * p.y;
 	default:
 		break;
 	}
@@ -70,7 +51,7 @@ vector<double> MultVectorByNum(vector<double> V, double num)
 	return result;
 }
 
-void holess_prec(vector<int>& ig, vector<int>& jg, vector<double>& gg, vector<double>&
+void holessPrec(vector<int>& ig, vector<int>& jg, vector<double>& gg, vector<double>&
 	di, vector<double>& gg_L, vector<double>& di_L, int n)
 {
 	di_L[0] = sqrt(di[0]);
@@ -116,7 +97,7 @@ void holess_prec(vector<int>& ig, vector<int>& jg, vector<double>& gg, vector<do
 	}
 }
 
-void matrix_mult(vector<int>& ig, vector<int>& jg, vector<double>& ggl, vector<double>&
+void matrixMult(vector<int>& ig, vector<int>& jg, vector<double>& ggl, vector<double>&
 	ggu, vector<double>& di, vector<double>& x, vector<double>& res, int n)
 {
 	for (int i = 0; i < n; i++)
@@ -133,21 +114,21 @@ void matrix_mult(vector<int>& ig, vector<int>& jg, vector<double>& ggl, vector<d
 	}
 }
 
-void matrix_sub(vector<double>& m1, vector<double>& m2, vector<double>& res)
+void matrixSub(vector<double>& m1, vector<double>& m2, vector<double>& res)
 {
 	for (size_t i = 0; i < m1.size(); i++)
 	{
 		res[i] = m1[i] - m2[i];
 	}
 }
-void matrix_mult_by_num(double num, vector<double>& m, vector<double>& res)
+void matrixMultByNum(double num, vector<double>& m, vector<double>& res)
 {
 	for (size_t i = 0; i < m.size(); i++)
 	{
 		res[i] = num * m[i];
 	}
 }
-void slau_holess_stright(vector<int>& ig, vector<int>& jg, vector<double>& gg,
+void slauHolessStright(vector<int>& ig, vector<int>& jg, vector<double>& gg,
 	vector<double>& di, vector<double>& f, vector<double>& res, int n)
 {
 	for (int i = 0; i < n; i++)
@@ -160,7 +141,7 @@ void slau_holess_stright(vector<int>& ig, vector<int>& jg, vector<double>& gg,
 		res[i] /= di[i];
 	}
 }
-void slau_holess_reversal(vector<int>& ig, vector<int>& jg, vector<double>& gg,
+void slauHolessReversal(vector<int>& ig, vector<int>& jg, vector<double>& gg,
 	vector<double>& di, vector<double>& f, vector<double>& res, int n)
 {
 	res = f;
@@ -175,15 +156,15 @@ void slau_holess_reversal(vector<int>& ig, vector<int>& jg, vector<double>& gg,
 }
 
 
-void slau_holess(vector<int>& ig, vector<int>& jg, vector<double>& gg, vector<double>&
+void slauHoless(vector<int>& ig, vector<int>& jg, vector<double>& gg, vector<double>&
 	di, vector<double>& f, vector<double>& res, int n)
 {
 	vector<double> y(n);
-	slau_holess_stright(ig, jg, gg, di, f, y, n);
-	slau_holess_reversal(ig, jg, gg, di, y, res, n);
+	slauHolessStright(ig, jg, gg, di, f, y, n);
+	slauHolessReversal(ig, jg, gg, di, y, res, n);
 }
 
-void matrix_add(vector<double>& m1, vector<double>& m2, vector<double>& res)
+void matrixAdd(vector<double>& m1, vector<double>& m2, vector<double>& res)
 {
 	for (size_t i = 0; i < m1.size(); i++)
 	{
@@ -192,46 +173,49 @@ void matrix_add(vector<double>& m1, vector<double>& m2, vector<double>& res)
 }
 
 
-void CGM_with_holes_prec(vector<int>& ig, vector<int>& jg, vector<double>& gg,
+void cgmWithHolesPrec(vector<int>& ig, vector<int>& jg, vector<double>& gg,
 	vector<double>& di, vector<double>& f, vector<double>& res, int n, int maxiter, double
 	eps)
 {
+	for (auto i = 0; i < res.size(); i++)
+	{
+		res[i] = 0;
+	}
+	
 	vector<double> gg_L(gg.size());
 	vector<double> di_L(n);
-	holess_prec(ig, jg, gg, di, gg_L, di_L, n);
+	holessPrec(ig, jg, gg, di, gg_L, di_L, n);
 	vector<double> xk1(n, 0);
 	vector<double> rk(n), rk1(n), zk(n), Am(n), numA(n);
 
-	// используются в формулах несколько раз
 	double scalMult, f_norm = sqrt(dotProduct(f, f));
 	vector<double> Azk1(n), M1rk(n);
 	double alpha, beta, residual;
 	int k = 1;
 
-	matrix_mult(ig, jg, gg, gg, di, xk1, Am, n);
-	matrix_sub(f, Am, rk1);
-	slau_holess(ig, jg, gg_L, di_L, rk1, zk, n);
+	matrixMult(ig, jg, gg, gg, di, xk1, Am, n);
+	matrixSub(f, Am, rk1);
+	slauHoless(ig, jg, gg_L, di_L, rk1, zk, n);
 
 	while (true)
 	{
-		slau_holess(ig, jg, gg_L, di_L, rk1, Am, n);
+		slauHoless(ig, jg, gg_L, di_L, rk1, Am, n);
 		scalMult = dotProduct(Am, rk1); // ( M^-1*r(k-1), r(k-1) )
-		matrix_mult(ig, jg, gg, gg, di, zk, Azk1, n);
+		matrixMult(ig, jg, gg, gg, di, zk, Azk1, n);
 		alpha = scalMult / dotProduct(Azk1, zk);
-		matrix_mult_by_num(alpha, zk, numA);
-		matrix_add(xk1, numA, res);
-		matrix_mult_by_num(alpha, Azk1, numA);
-		matrix_sub(rk1, numA, rk);
-		slau_holess(ig, jg, gg_L, di_L, rk, M1rk, n);
+		matrixMultByNum(alpha, zk, numA);
+		matrixAdd(xk1, numA, res);
+		matrixMultByNum(alpha, Azk1, numA);
+		matrixSub(rk1, numA, rk);
+		slauHoless(ig, jg, gg_L, di_L, rk, M1rk, n);
 		beta = dotProduct(M1rk, rk) / scalMult;
-		matrix_mult_by_num(beta, zk, numA);
-		matrix_add(M1rk, numA, zk);
+		matrixMultByNum(beta, zk, numA);
+		matrixAdd(M1rk, numA, zk);
 		xk1 = res;
 		rk1 = rk;
-		std::cout << "Number of iteration: " << k << "; residual: ";
 		k++;
 		residual = sqrt(dotProduct(rk, rk)) / f_norm;
-		//std::cout << scientific << residual << std::endl;
+
 		if (k > maxiter)
 		{
 			std::cout << "The maximum number of iterations has been exceeded." <<
@@ -240,6 +224,7 @@ void CGM_with_holes_prec(vector<int>& ig, vector<int>& jg, vector<double>& gg,
 		}
 		if (residual < eps)
 		{
+			
 			std::cout << "Residual exit." << std::endl;
 			break;
 		}

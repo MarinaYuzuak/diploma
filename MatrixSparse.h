@@ -21,7 +21,6 @@ public:
 	void setDi(vector<double> _di)
 	{
 		di = _di;
-		// ÌÛ Ë ıÂÌ¸... œ≈–≈ƒ≈À¿“‹
 		m_N = di.size();
 	}
 
@@ -65,10 +64,6 @@ public:
 		return ggu;
 	}
 
-	//vector<double> getDi()
-	//{
-	//	return di;
-	//}
 
 	vector<double>& getDi()
 	{
@@ -127,16 +122,6 @@ std::vector<double> MatrixSparse::MultiplyByVector(const std::vector<double>& ve
 
 vector<vector<double>> MatrixSparse::getDenseMatrix()
 {
-	/*auto ggl = A.getGgl();
-	auto di = A.getDi();
-	auto ig = A.getIg();
-	auto jg = A.getJg();*/
-
-	//vector<int> _ig = { 0, 0, 1, 1, 3, 4, 6 };
-	//vector<int> _jg = { 0, 0, 1, 3, 1, 2 };
-	//vector<double> _di = { 1, 5, 8, 12, 15, 19 };
-	//vector<double> _ggl = { 4, 10, 11, 14, 16, 17 };
-
 	vector<vector<double>> res(ig.size() - 1, vector<double>(ig.size() - 1));
 
 	for (auto i = 0; i < ig.size() - 1; i++)
@@ -163,23 +148,6 @@ vector<vector<double>> MatrixSparse::getDenseMatrix()
 						res[i][j] = ggl[l];
 						res[j][i] = ggl[l];
 					}
-						
-
-					/*for (ind = _ig[i]; _ig[i + 1]; ind++)
-					{
-						if (_jg[ind] == j)
-						{
-							isFound = true;
-							break;
-						}
-					}
-					if(isFound)
-					res[i][j] = _ggl[ind];*/
-				/*auto l = binarySearch(_jg, j, _ig[i], _ig[i + 1]);
-				if (l != -1)
-					res[i][j] = _ggl[l];*/
-				/*else
-					std::cout << "ERROR! NOT FOUND INDEX." << std::endl;*/
 			}
 			else if (i == j)
 			{
