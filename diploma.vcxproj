@@ -135,7 +135,6 @@
     <ClInclude Include="MatrixSparse.h" />
     <ClInclude Include="Solver.h" />
     <ClInclude Include="Structures.h" />
-    <ClInclude Include="Vector.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

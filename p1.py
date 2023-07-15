@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+
+fig, ax = plt.subplots()
 
 x_data = []
 with open("x.txt") as f:
@@ -18,11 +21,23 @@ for d in x_data:
 for d in y_data:
     plt.axhline(y=d, xmin=0, xmax=1)
 
-plt.scatter(300 , 300, c = 'deeppink')
-plt.scatter(300 , 700, c = 'deeppink')
+ax.add_patch (Rectangle((1, 1), 2, 6))
 
-plt.scatter(500 , 600, c = 'orange')
-plt.scatter(600 , 600, c = 'orange')
+plt.scatter(-500 , -1500, c = 'deeppink', s=30)
+plt.scatter(1000 , -1500, c = 'deeppink', s=30)
 
-plt.grid()
+#plt.scatter(-500 , -1580, c = 'orange', s=30)
+#plt.scatter(1000 , -1580, c = 'orange', s=30)
+
+#plt.scatter(-500 , -1710, c = 'orange', s=30)
+#plt.scatter(1000 , -1710, c = 'orange', s=30)
+
+plt.scatter(-500 , -1630, c = 'orange', s=30)
+plt.scatter(1000 , -1630, c = 'orange', s=30)
+
+plt.scatter(-500 , -1770, c = 'orange', s=30)
+plt.scatter(1000 , -1770, c = 'orange', s=30)
+
+
 plt.show()
+

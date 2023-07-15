@@ -30,9 +30,6 @@
     <ClInclude Include="MatrixSparse.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="Vector.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
     <ClInclude Include="functions.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>

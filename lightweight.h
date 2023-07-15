@@ -92,23 +92,39 @@ double Y_func(int num, double y, double ys, double hy)
 	}
 }
 
-// тут пока что не все!!! функция написана только для вычисления вектора правой части, где нужны билинейные б/ф
-double basisBilinearFunc(int num, double x, double xp, double y, double ys, double hx, double hy)
+double Z_func(int num, double z, double zr, double hz)
 {
 	switch (num)
 	{
 	case 0:
-		return X_func(0, x, xp, hx) * Y_func(0, y, ys, hy);
+		return (zr - z) / hz;
 	case 1:
-		return X_func(1, x, xp, hx) * Y_func(0, y, ys, hy);
-	case 2:
-		return X_func(0, x, xp, hx) * Y_func(1, y, ys, hy);
-	case 3:
-		return X_func(1, x, xp, hx) * Y_func(1, y, ys, hy);
+		return (z - zr) / hz;
 
 	default:
 		break;
 	}
+}
+
+/// <summary>
+/// Возвращает значение локальной базисной функции в точке.
+/// </summary>
+/// <param name="i"></param>
+/// номер локальной функции
+/// <param name="p"></param>
+/// точка, в которой надо вычислить значение
+/// <param name="pEl"></param>
+/// необходимые узлы элемента
+/// <param name="h"></param>
+/// шаги на элементе
+/// <returns></returns>
+double Psi(int i, Point3D p, Point3D pEl, Point3D h)
+{
+	auto a = getFirstIndex(i);
+	auto b = getSecondIndex(i);
+	auto c = getThirdIndex(i);
+
+	return X_func(a, p.x, pEl.x, h.x) * Y_func(b, p.y, pEl.y, h.y) * Z_func(c, p.z, pEl.z, h.z);
 }
 
 int binarySearch(const vector<int>& values, int value, int left, int right)
@@ -191,21 +207,17 @@ bool doParallelepipedsIntersect(vector<Point3D> P1, vector<Point3D> P2)
 
 }
 
-// пока что можно считать, что эти две функции вообще не работают))))) потому что координаты плюсовые
-bool isElementIntersectLayer(double zLayer, double z0El, double z1El)
-{
-	if (z0El < zLayer && z1El > zLayer)
-		return true;
-	else
-		return false;
-}
-
 bool isElementBelongsLayer(Layer l, double z0El, double z1El)
 {
 	if (z0El >= l.z0 && z1El <= l.z1)
 		return true;
 	else
 		return false;
+}
+
+double distance(Point2D a, Point2D b)
+{
+	return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
 }
 
 #endif
